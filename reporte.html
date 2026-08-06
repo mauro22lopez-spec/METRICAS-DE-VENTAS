@@ -163,7 +163,7 @@ function render(estadoIdx){
     ['Conversion real',pcC(ventas),ventas+' ventas sobre '+contactados+' contactados'],
     ['Ventas por 100 puertas',(total?(ventas/total*100).toFixed(1):0),'rendimiento del recorrido'],
     ['Captacion de dato',pcC(datos),datos+' datos sobre '+contactados+' contactados'],
-    ['Volver a pasar',(counts['Volver a pasar']||0),'pendientes de repasar'],
+    ['Ausente',pc(ausentes),ausentes+' de '+total+' ausentes'],
     ['Datos pendientes',datos,'seguimiento por hacer']
   ].map(k=>'<div class="kpi"><div class="v">'+k[1]+'</div><div class="l">'+k[0]+'</div><div class="h">'+k[2]+'</div></div>').join('');
 
