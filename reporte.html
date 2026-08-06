@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte de Cobertura - Metricas de Ventas</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--txt:#e2e8f0;--mut:#94a3b8;--acc:#38bdf8;--bd:#334155;--ok:#22c55e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt);padding:16px;line-height:1.5;max-width:1100px;margin:0 auto}
+  a.back{color:var(--acc);text-decoration:none;font-size:.9rem}
+  h1{font-size:1.5rem;margin:6px 0 2px}
+  .sub{color:var(--mut);font-size:.9rem;margin-bottom:20px}
+  .panel{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{background:var(--acc);color:#04283a;border:none;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;font-size:.95rem}
+  button.sec{background:#334155;color:var(--txt)}
+  label.file{background:var(--acc);color:#04283a;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer;display:inline-block}
+  input[type=file]{display:none}
+  textarea{width:100%;min-height:90px;background:#0f172a;color:var(--txt);border:1px solid var(--bd);border-radius:8px;padding:10px;font-family:monospace;font-size:.85rem}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:8px}
+  .stat{background:#0f172a;border:1px solid var(--bd);border-left-width:5px;border-radius:10px;padding:14px}
+  .stat .pct{font-size:1.9rem;font-weight:700}
+  .stat .nm{font-size:.9rem;font-weight:600}
+  .stat .ct{color:var(--mut);font-size:.8rem}
+  .kpi{background:#0f172a;border:1px solid var(--bd);border-radius:10px;padding:14px;text-align:center}
+  .kpi .v{font-size:1.7rem;font-weight:700;color:var(--acc)}
+  .kpi .l{font-size:.82rem;color:var(--mut);margin-top:2px}
+  .kpi .h{font-size:.72rem;color:#64748b;margin-top:4px}
+  .total{font-size:1.05rem}
+  .total b{font-size:1.5rem;color:var(--acc)}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.9rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd)}
+  th{color:var(--mut);font-weight:600}
+  .chart{display:flex;gap:20px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .legend{list-style:none;font-size:.9rem}
+  .legend li{display:flex;align-items:center;gap:8px;margin:4px 0}
+  .dot{width:12px;height:12px;border-radius:3px;display:inline-block}
+  .hint{color:var(--mut);font-size:.82rem;margin-top:6px}
+  .err{color:#f87171;font-size:.9rem;margin-top:8px}
+  select{background:#0f172a;color:var(--txt);border:1px solid var(--bd);border-radius:8px;padding:8px}
+  h2{font-size:1.05rem;margin-bottom:8px}
+  .hidden{display:none}
+  .minibar{background:#0f172a;border-radius:5px;height:16px;position:relative;min-width:120px}
+  .minibar>span{position:absolute;left:0;top:0;bottom:0;background:var(--ok);border-radius:5px}
+</style>
+</head>
+<body>
+  <a class="back" href="index.html">&larr; Volver al inicio</a>
+  <h1>Reporte de Cobertura</h1>
+  <div class="sub">Carga el CSV que exportas de tus apps y obtene las metricas de tu recorrido puerta a puerta.</div>
+
+  <div class="panel">
+    <div class="row">
+      <label class="file">Elegir CSV<input type="file" id="file" accept=".csv,.txt"></label>
+      <button class="sec" id="pasteBtn">Pegar texto</button>
+      <button class="sec" id="demoBtn">Ver ejemplo</button>
+    </div>
+    <div id="pasteArea" class="hidden" style="margin-top:12px">
+      <textarea id="csvText" placeholder="Pega aca el contenido del CSV (con encabezados)..."></textarea>
+      <div class="row" style="margin-top:8px"><button id="procBtn">Procesar</button></div>
+    </div>
+    <div id="colPick" class="hidden" style="margin-top:12px">
+      Columna de estado: <select id="colSel"></select>
+    </div>
+    <div class="hint">Detecta separador , o ; y reconoce estados como Ausente, Dato, Venta y otros automaticamente.</div>
+    <div id="err" class="err"></div>
+  </div>
+
+  <div id="report" class="hidden">
+    <div class="panel">
+      <h2>Indicadores clave</h2>
+      <div class="cards" id="kpis"></div>
+    </div>
+    <div class="panel">
+      <div class="total">Total de registros: <b id="total">0</b></div>
+      <div class="cards" id="cards"></div>
+    </div>
+    <div class="panel">
+      <h2>Distribucion por estado</h2>
+      <div class="chart">
+        <svg id="donut" width="180" height="180" viewBox="0 0 180 180"></svg>
+        <ul class="legend" id="legend"></ul>
+      </div>
+    </div>
+    <div class="panel" id="locPanel">
+      <h2>Ranking de zonas por conversion</h2>
+      <table id="locTable"><thead></thead><tbody></tbody></table>
+    </div>
+    <div class="panel" id="datePanel">
+      <h2>Tendencia por fecha</h2>
+      <table id="dateTable"><thead></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+<script>
+const COLORS=['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899','#14b8a6','#eab308','#64748b'];
+function norm(s){return (s||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function canon(v){
+  const n=norm(v);
+  if(!n) return 'Sin dato';
+  if(n.includes('ausente')||n==='aus') return 'Ausente';
+  if(n.includes('venta')||n.includes('vendi')||n.includes('cerrad')) return 'Venta';
+  if(n.includes('dato')||n.includes('interesad')) return 'Dato';
+  if(n.includes('no interesa')||n.includes('rechaz')||n.includes('negativ')) return 'No interesa';
+  if(n.includes('volver')||n.includes('repasar')||n.includes('reagend')) return 'Volver a pasar';
+  return v.toString().trim().replace(/\b\w/g,c=>c.toUpperCase());
+}
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const firstLine=text.split(/\r?\n/)[0]||'';
+  const sep=(firstLine.split(';').length>firstLine.split(',').length)?';':',';
+  const rows=[];let field='',row=[],q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){field+='"';i++} else q=false } else field+=c; }
+    else{
+      if(c==='"')q=true;
+      else if(c===sep){row.push(field);field=''}
+      else if(c==='\n'){row.push(field);rows.push(row);row=[];field=''}
+      else if(c==='\r'){}
+      else field+=c;
+    }
+  }
+  if(field.length||row.length){row.push(field);rows.push(row)}
+  return rows.filter(r=>r.some(x=>x.trim()!==''));
+}
+let parsed=null, headers=[];
+function findCol(names){return headers.findIndex(h=>names.includes(norm(h)))}
+function loadText(text){
+  document.getElementById('err').textContent='';
+  const rows=parseCSV(text);
+  if(rows.length<2){document.getElementById('err').textContent='El CSV no tiene datos suficientes (encabezado + filas).';return}
+  headers=rows[0].map(h=>h.trim());
+  parsed=rows.slice(1);
+  let idx=findCol(['estado','status','situacion']);
+  const sel=document.getElementById('colSel');
+  sel.innerHTML=headers.map((h,i)=>'<option value="'+i+'">'+(h||('Columna '+(i+1)))+'</option>').join('');
+  if(idx<0)idx=0; sel.value=idx;
+  document.getElementById('colPick').classList.remove('hidden');
+  sel.onchange=()=>render(+sel.value);
+  render(idx);
+}
+function render(estadoIdx){
+  const locIdx=findCol(['localidad','ciudad','barrio','zona']);
+  const dateIdx=findCol(['fecha','date','dia']);
+  const counts={}, byLoc={}, byDate={};
+  let total=0;
+  parsed.forEach(r=>{
+    const cat=canon(r[estadoIdx]); counts[cat]=(counts[cat]||0)+1; total++;
+    if(locIdx>=0){const loc=((r[locIdx]||'-').trim())||'-'; (byLoc[loc]=byLoc[loc]||{})[cat]=(byLoc[loc][cat]||0)+1;}
+    if(dateIdx>=0){const d=((r[dateIdx]||'-').trim())||'-'; (byDate[d]=byDate[d]||{})[cat]=(byDate[d][cat]||0)+1;}
+  });
+  const cats=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  const colorOf={}; cats.forEach((c,i)=>colorOf[c]=COLORS[i%COLORS.length]);
+  const ausentes=counts['Ausente']||0, ventas=counts['Venta']||0, datos=counts['Dato']||0;
+  const contactados=total-ausentes;
+  const pc=n=>total?((n/total*100).toFixed(1)+'%'):'0%';
+  const pcC=n=>contactados?((n/contactados*100).toFixed(1)+'%'):'0%';
+
+  document.getElementById('kpis').innerHTML=[
+    ['Tasa de contacto',pc(contactados),contactados+' de '+total+' te atendieron'],
+    ['Conversion real',pcC(ventas),ventas+' ventas sobre '+contactados+' contactados'],
+    ['Ventas por 100 puertas',(total?(ventas/total*100).toFixed(1):0),'rendimiento del recorrido'],
+    ['Captacion de dato',pcC(datos),datos+' datos sobre '+contactados+' contactados'],
+    ['Volver a pasar',(counts['Volver a pasar']||0),'pendientes de repasar'],
+    ['Datos pendientes',datos,'seguimiento por hacer']
+  ].map(k=>'<div class="kpi"><div class="v">'+k[1]+'</div><div class="l">'+k[0]+'</div><div class="h">'+k[2]+'</div></div>').join('');
+
+  document.getElementById('total').textContent=total;
+  document.getElementById('cards').innerHTML=cats.map(c=>'<div class="stat" style="border-left-color:'+colorOf[c]+'"><div class="pct">'+pc(counts[c])+'</div><div class="nm">'+c+'</div><div class="ct">'+counts[c]+' de '+total+'</div></div>').join('');
+
+  drawDonut(cats.map(c=>({v:counts[c],col:colorOf[c]})),total);
+  document.getElementById('legend').innerHTML=cats.map(c=>'<li><span class="dot" style="background:'+colorOf[c]+'"></span>'+c+' - '+pc(counts[c])+' ('+counts[c]+')</li>').join('');
+
+  const locPanel=document.getElementById('locPanel');
+  if(locIdx>=0 && Object.keys(byLoc).length>=1){
+    locPanel.classList.remove('hidden');
+    const rowsL=Object.keys(byLoc).map(l=>{
+      const o=byLoc[l]; const t=Object.values(o).reduce((a,b)=>a+b,0);
+      const au=o['Ausente']||0, ve=o['Venta']||0, cont=t-au;
+      return {l:l,t:t,ve:ve,conv:cont?ve/cont*100:0};
+    }).sort((a,b)=>b.conv-a.conv);
+    const maxc=Math.max(1,...rowsL.map(r=>r.conv));
+    const tbl=document.getElementById('locTable');
+    tbl.querySelector('thead').innerHTML='<tr><th>Zona</th><th>Puertas</th><th>Ventas</th><th>Conversion</th><th></th></tr>';
+    tbl.querySelector('tbody').innerHTML=rowsL.map(r=>'<tr><td>'+r.l+'</td><td>'+r.t+'</td><td>'+r.ve+'</td><td>'+r.conv.toFixed(1)+'%</td><td><div class="minibar"><span style="width:'+(r.conv/maxc*100)+'%"></span></div></td></tr>').join('');
+  }else locPanel.classList.add('hidden');
+
+  const datePanel=document.getElementById('datePanel');
+  if(dateIdx>=0 && Object.keys(byDate).length>=1){
+    datePanel.classList.remove('hidden');
+    const days=Object.keys(byDate).sort();
+    const tbl=document.getElementById('dateTable');
+    tbl.querySelector('thead').innerHTML='<tr><th>Fecha</th><th>Puertas</th><th>Ventas</th><th>Contacto</th></tr>';
+    tbl.querySelector('tbody').innerHTML=days.map(d=>{
+      const o=byDate[d]; const t=Object.values(o).reduce((a,b)=>a+b,0);
+      const au=o['Ausente']||0, ve=o['Venta']||0; const cont=t-au;
+      return '<tr><td>'+d+'</td><td>'+t+'</td><td>'+ve+'</td><td>'+(t?(cont/t*100).toFixed(0):0)+'%</td></tr>';
+    }).join('');
+  }else datePanel.classList.add('hidden');
+
+  document.getElementById('report').classList.remove('hidden');
+}
+function drawDonut(data,total){
+  const svg=document.getElementById('donut'); const cx=90,cy=90,r=70,w=28;
+  let ang=-Math.PI/2, parts='';
+  data.forEach(d=>{
+    const frac=total?d.v/total:0; const a2=ang+frac*2*Math.PI; const large=frac>0.5?1:0;
+    const x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang);
+    const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    parts+='<path d="M'+x1+' '+y1+' A'+r+' '+r+' 0 '+large+' 1 '+x2+' '+y2+'" stroke="'+d.col+'" stroke-width="'+w+'" fill="none"/>';
+    ang=a2;
+  });
+  svg.innerHTML=parts+'<text x="90" y="86" text-anchor="middle" fill="#e2e8f0" font-size="26" font-weight="700">'+total+'</text><text x="90" y="106" text-anchor="middle" fill="#94a3b8" font-size="12">registros</text>';
+}
+document.getElementById('file').onchange=e=>{const f=e.target.files[0]; if(!f)return; const rd=new FileReader(); rd.onload=()=>loadText(rd.result); rd.readAsText(f,'UTF-8');};
+document.getElementById('pasteBtn').onclick=()=>document.getElementById('pasteArea').classList.toggle('hidden');
+document.getElementById('procBtn').onclick=()=>loadText(document.getElementById('csvText').value);
+document.getElementById('demoBtn').onclick=()=>loadText('direccion,localidad,estado,nota,fecha\nMitre 100,Rosario,Ausente,,2026-08-01\nSan Luis 250,Rosario,Dejo dato,tel,2026-08-01\nCordoba 800,Rosario,Venta,plan familiar,2026-08-02\nSarmiento 90,Funes,Ausente,,2026-08-02\nBelgrano 45,Funes,No interesa,,2026-08-03\nUrquiza 300,Rosario,Venta,,2026-08-03\nAlsina 12,Rosario,Volver a pasar,timbre,2026-08-04\nRioja 700,Funes,Dejo dato,,2026-08-04\nMoreno 55,Rosario,Venta,,2026-08-04\nSalta 900,Funes,Ausente,,2026-08-05');
+</script>
+</body>
+</html>
