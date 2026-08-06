@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Registro de Visitas — Cobertura Médica</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --ink:#12211c;
+    --paper:#f6f4ee;
+    --line:#d9d4c7;
+    --brand:#0f5c4a;
+    --brand-soft:#e3efe9;
+    --amber:#b9791a;
+    --slate:#5c6660;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    color:var(--ink);background:var(--paper);
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+  }
+  header{
+    background:var(--brand);color:#fff;padding:10px 14px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;
+  }
+  header h1{font-size:16px;font-weight:600;letter-spacing:.2px}
+  header .count{font-size:12px;opacity:.85;font-weight:400}
+  .topbtns{display:flex;gap:6px}
+  .topbtns button{
+    background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);
+    padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;
+  }
+  .topbtns button:active{background:rgba(255,255,255,.3)}
+
+  .panel{
+    background:#fff;border-bottom:1px solid var(--line);padding:10px 12px;flex-shrink:0;
+  }
+  .row{display:flex;gap:8px;margin-bottom:8px}
+  .row:last-child{margin-bottom:0}
+  input[type=text],select{
+    flex:1;padding:10px;border:1px solid var(--line);border-radius:8px;
+    font-size:14px;background:var(--paper);color:var(--ink);min-width:0;
+  }
+  input:focus,select:focus{outline:2px solid var(--brand)}
+  .btn{
+    background:var(--brand);color:#fff;border:none;padding:10px 14px;
+    border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;
+  }
+  .btn:active{opacity:.85}
+  .btn.sec{background:var(--brand-soft);color:var(--brand)}
+  .btn:disabled{opacity:.5;cursor:default}
+
+  #map{flex:1;min-height:0}
+
+  .hint{font-size:11px;color:var(--slate);margin-top:4px}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(18,33,28,.5);display:none;
+    align-items:flex-end;justify-content:center;z-index:9999;
+  }
+  .overlay.show{display:flex}
+  .sheet{
+    background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;
+    padding:16px;max-height:88vh;overflow:auto;
+  }
+  .sheet h2{font-size:16px;margin-bottom:4px}
+  .sheet .addr{font-size:13px;color:var(--slate);margin-bottom:12px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--slate)}
+  .field textarea{
+    width:100%;padding:10px;border:1px solid var(--line);border-radius:8px;
+    font-size:14px;font-family:inherit;resize:vertical;min-height:60px;
+  }
+  .estados{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{
+    padding:8px 12px;border-radius:20px;border:2px solid var(--line);
+    background:#fff;font-size:13px;cursor:pointer;user-select:none;
+  }
+  .chip.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .sheet-actions{display:flex;gap:8px;margin-top:6px}
+  .sheet-actions .btn{flex:1}
+  .btn.del{background:#fbe9e7;color:#b3261e}
+
+  /* Config estados */
+  .cfg-item{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .cfg-item input[type=color]{width:38px;height:38px;border:none;border-radius:8px;padding:0;background:none}
+  .cfg-item .x{background:#fbe9e7;color:#b3261e;border:none;border-radius:8px;width:38px;height:38px;font-size:16px;cursor:pointer}
+
+  .legend{
+    position:absolute;bottom:12px;left:12px;z-index:500;background:#fff;
+    border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);max-width:150px;
+  }
+  .legend .li{display:flex;align-items:center;gap:6px;margin:2px 0}
+  .legend .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+
+  .toast{
+    position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;
+    font-size:13px;z-index:99999;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center;
+  }
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Registro de Visitas</h1>
+    <div class="count" id="count">0 domicilios</div>
+  </div>
+  <div class="topbtns">
+    <button id="btnCfg">Estados</button>
+    <button id="btnExport">Exportar</button>
+    <button id="btnImport">Importar</button>
+  </div>
+</header>
+
+<div class="panel">
+  <div class="row">
+    <input type="text" id="calle" placeholder="Calle y altura — ej: San Martín 2340" autocomplete="off">
+  </div>
+  <div class="row">
+    <input type="text" id="ciudad" placeholder="Localidad" value="Rosario" autocomplete="off">
+    <button class="btn" id="btnBuscar">Buscar</button>
+  </div>
+  <div class="hint">Escribí la dirección y tocá Buscar. El punto queda en el mapa para que le cargues el estado.</div>
+</div>
+
+<div style="position:relative;flex:1;min-height:0">
+  <div id="map"></div>
+  <div class="legend" id="legend"></div>
+</div>
+
+<!-- Sheet: cargar/editar registro -->
+<div class="overlay" id="sheetVisita">
+  <div class="sheet">
+    <h2 id="svTitulo">Registrar visita</h2>
+    <div class="addr" id="svAddr"></div>
+    <div class="field">
+      <label>Estado</label>
+      <div class="estados" id="svEstados"></div>
+    </div>
+    <div class="field">
+      <label>Nota / dato que quedó</label>
+      <textarea id="svNota" placeholder="Ej: dejó teléfono 341..., pasar de tarde, interesado en plan familiar"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn del" id="svEliminar">Eliminar</button>
+      <button class="btn" id="svGuardar">Guardar</button>
+    </div>
+    <div class="sheet-actions" style="margin-top:8px">
+      <button class="btn sec" id="svCerrar" style="flex:1">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sheet: configurar estados -->
+<div class="overlay" id="sheetCfg">
+  <div class="sheet">
+    <h2>Estados de visita</h2>
+    <div class="addr">Definí tus propios estados y colores. Se guardan en este dispositivo.</div>
+    <div id="cfgList"></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="cfgNuevo" placeholder="Nuevo estado — ej: Volver a pasar">
+      <button class="btn" id="cfgAdd">Agregar</button>
+    </div>
+    <div class="sheet-actions" style="margin-top:14px">
+      <button class="btn sec" id="cfgCerrar" style="flex:1">Listo</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".csv" style="display:none">
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Persistencia local ---------- */
+const LS_REG = "rv_registros";
+const LS_EST = "rv_estados";
+
+const estadosDefault = [
+  {nombre:"Ausente",       color:"#b9791a"},
+  {nombre:"Dejó dato",     color:"#0f5c4a"},
+  {nombre:"No interesa",   color:"#8a8f8b"},
+  {nombre:"Volver a pasar",color:"#2b6cb0"},
+];
+
+let estados = load(LS_EST, estadosDefault);
+let registros = load(LS_REG, []);   // {id, addr, calle, ciudad, lat, lng, estado, nota, fecha}
+let markers = {};                   // id -> L.marker
+let editId = null;
+
+function load(k, def){ try{ const v = JSON.parse(localStorage.getItem(k)); return v ?? def; }catch(e){ return def; } }
+function save(){ localStorage.setItem(LS_REG, JSON.stringify(registros)); localStorage.setItem(LS_EST, JSON.stringify(estados)); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function colorDe(nombre){ const e = estados.find(x=>x.nombre===nombre); return e? e.color : "#5c6660"; }
+
+/* ---------- Mapa ---------- */
+const map = L.map('map').setView([-32.9468, -60.6393], 13); // Rosario
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19, attribution:'&copy; OpenStreetMap'
+}).addTo(map);
+
+function pin(color){
+  return L.divIcon({
+    className:'', iconSize:[22,22], iconAnchor:[11,11],
+    html:`<div style="width:20px;height:20px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`
+  });
+}
+
+function dibujar(r){
+  if(markers[r.id]){ map.removeLayer(markers[r.id]); }
+  const m = L.marker([r.lat,r.lng],{icon:pin(colorDe(r.estado))}).addTo(map);
+  m.on('click',()=>abrirVisita(r.id));
+  markers[r.id]=m;
+}
+
+function refrescarTodo(){
+  Object.values(markers).forEach(m=>map.removeLayer(m)); markers={};
+  registros.forEach(dibujar);
+  document.getElementById('count').textContent = registros.length + (registros.length===1?" domicilio":" domicilios");
+  dibujarLeyenda();
+}
+
+function dibujarLeyenda(){
+  const el = document.getElementById('legend');
+  el.innerHTML = estados.map(e=>`<div class="li"><span class="dot" style="background:${e.color}"></span>${e.nombre}</div>`).join('');
+}
+
+/* ---------- Geocodificación (Georef Argentina) ---------- */
+async function geocodificar(calle, ciudad){
+  const url = `https://apis.datos.gob.ar/georef/api/direcciones?direccion=${encodeURIComponent(calle)}&localidad=${encodeURIComponent(ciudad)}&max=1`;
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error("Georef no respondió");
+  const data = await resp.json();
+  if(!data.direcciones || !data.direcciones.length) return null;
+  const d = data.direcciones[0];
+  if(!d.ubicacion || d.ubicacion.lat==null) return null;
+  return { lat:d.ubicacion.lat, lng:d.ubicacion.lon, nombre:d.nomenclatura || `${calle}, ${ciudad}` };
+}
+
+document.getElementById('btnBuscar').addEventListener('click', async ()=>{
+  const calle = document.getElementById('calle').value.trim();
+  const ciudad = document.getElementById('ciudad').value.trim() || "Rosario";
+  if(!calle){ toast("Escribí una dirección"); return; }
+  const btn = document.getElementById('btnBuscar');
+  btn.disabled = true; btn.textContent="...";
+  try{
+    const g = await geocodificar(calle, ciudad);
+    if(!g){ toast("No encontré esa dirección. Revisá calle y altura."); return; }
+    const r = { id:uid(), addr:g.nombre, calle, ciudad, lat:g.lat, lng:g.lng, estado:estados[0].nombre, nota:"", fecha:hoy() };
+    registros.push(r); save(); dibujar(r);
+    document.getElementById('count').textContent = registros.length + " domicilios";
+    map.setView([r.lat,r.lng], 16);
+    document.getElementById('calle').value="";
+    abrirVisita(r.id);
+  }catch(e){
+    toast("Error de conexión con el geocodificador");
+  }finally{
+    btn.disabled=false; btn.textContent="Buscar";
+  }
+});
+
+/* ---------- Sheet visita ---------- */
+function abrirVisita(id){
+  editId = id;
+  const r = registros.find(x=>x.id===id); if(!r) return;
+  document.getElementById('svAddr').textContent = r.addr;
+  document.getElementById('svNota').value = r.nota || "";
+  renderEstadosChips(r.estado);
+  document.getElementById('sheetVisita').classList.add('show');
+}
+function renderEstadosChips(sel){
+  const cont = document.getElementById('svEstados');
+  cont.innerHTML = estados.map(e=>
+    `<span class="chip ${e.nombre===sel?'on':''}" data-e="${e.nombre}" style="${e.nombre===sel?`border-color:${e.color};background:${e.color}22;color:${e.color}`:''}">${e.nombre}</span>`
+  ).join('');
+  cont.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click',()=>renderEstadosChips(c.dataset.e));
+  });
+}
+document.getElementById('svGuardar').addEventListener('click',()=>{
+  const r = registros.find(x=>x.id===editId); if(!r) return;
+  const sel = document.querySelector('#svEstados .chip.on');
+  r.estado = sel ? sel.dataset.e : estados[0].nombre;
+  r.nota = document.getElementById('svNota').value.trim();
+  r.fecha = hoy();
+  save(); dibujar(r); cerrarVisita(); toast("Guardado");
+});
+document.getElementById('svEliminar').addEventListener('click',()=>{
+  if(!confirm("¿Eliminar este domicilio?")) return;
+  if(markers[editId]) map.removeLayer(markers[editId]);
+  registros = registros.filter(x=>x.id!==editId); save();
+  document.getElementById('count').textContent = registros.length + " domicilios";
+  cerrarVisita(); toast("Eliminado");
+});
+document.getElementById('svCerrar').addEventListener('click',cerrarVisita);
+function cerrarVisita(){ document.getElementById('sheetVisita').classList.remove('show'); editId=null; }
+
+/* ---------- Config estados ---------- */
+document.getElementById('btnCfg').addEventListener('click',()=>{ renderCfg(); document.getElementById('sheetCfg').classList.add('show'); });
+document.getElementById('cfgCerrar').addEventListener('click',()=>{ document.getElementById('sheetCfg').classList.remove('show'); refrescarTodo(); });
+function renderCfg(){
+  const list = document.getElementById('cfgList');
+  list.innerHTML = estados.map((e,i)=>`
+    <div class="cfg-item">
+      <input type="color" value="${e.color}" data-i="${i}" class="cfgColor">
+      <input type="text" value="${e.nombre}" data-i="${i}" class="cfgName" style="flex:1;padding:9px;border:1px solid var(--line);border-radius:8px">
+      <button class="x" data-i="${i}">✕</button>
+    </div>`).join('');
+  list.querySelectorAll('.cfgColor').forEach(c=>c.addEventListener('input',e=>{ estados[e.target.dataset.i].color=e.target.value; save(); }));
+  list.querySelectorAll('.cfgName').forEach(c=>c.addEventListener('change',e=>{ estados[e.target.dataset.i].nombre=e.target.value.trim()||"Sin nombre"; save(); }));
+  list.querySelectorAll('.x').forEach(b=>b.addEventListener('click',e=>{
+    if(estados.length<=1){ toast("Dejá al menos un estado"); return; }
+    estados.splice(e.target.dataset.i,1); save(); renderCfg();
+  }));
+}
+document.getElementById('cfgAdd').addEventListener('click',()=>{
+  const n = document.getElementById('cfgNuevo').value.trim(); if(!n) return;
+  const paleta=["#0f5c4a","#b9791a","#2b6cb0","#8a5cf6","#b3261e","#5c6660"];
+  estados.push({nombre:n,color:paleta[estados.length%paleta.length]});
+  document.getElementById('cfgNuevo').value=""; save(); renderCfg();
+});
+
+/* ---------- Export / Import CSV ---------- */
+function hoy(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function csvEscape(s){ s=(s??"").toString(); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }
+
+document.getElementById('btnExport').addEventListener('click',()=>{
+  if(!registros.length){ toast("No hay registros para exportar"); return; }
+  const head = ["direccion","localidad","estado","nota","lat","lng","fecha"];
+  const rows = registros.map(r=>[r.addr,r.ciudad,r.estado,r.nota,r.lat,r.lng,r.fecha].map(csvEscape).join(","));
+  const csv = "\uFEFF"+head.join(",")+"\n"+rows.join("\n");
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download="visitas_"+hoy()+".csv"; a.click();
+  toast("Exportado "+registros.length+" registros");
+});
+
+document.getElementById('btnImport').addEventListener('click',()=>document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{ try{ importarCSV(ev.target.result); }catch(err){ toast("CSV inválido"); } e.target.value=""; };
+  reader.readAsText(f);
+});
+function parseCSV(text){
+  const rows=[]; let row=[],cur="",q=false;
+  text=text.replace(/^\uFEFF/,"");
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{ if(c==='"')q=true; else if(c===',' ){row.push(cur);cur="";} else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur="";} else if(c!=='\r')cur+=c; }
+  }
+  if(cur.length||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+function importarCSV(text){
+  const rows=parseCSV(text).filter(r=>r.length>1);
+  if(!rows.length){ toast("CSV vacío"); return; }
+  const head=rows[0].map(h=>h.trim().toLowerCase());
+  const idx=n=>head.indexOf(n);
+  let n=0;
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    const lat=parseFloat(r[idx("lat")]), lng=parseFloat(r[idx("lng")]);
+    if(isNaN(lat)||isNaN(lng)) continue;
+    const estado = idx("estado")>=0 ? (r[idx("estado")]||estados[0].nombre) : estados[0].nombre;
+    if(estado && !estados.find(e=>e.nombre===estado)){
+      const paleta=["#0f5c4a","#b9791a","#2b6cb0","#8a5cf6","#b3261e","#5c6660"];
+      estados.push({nombre:estado,color:paleta[estados.length%paleta.length]});
+    }
+    registros.push({
+      id:uid(),
+      addr: idx("direccion")>=0? r[idx("direccion")] : (lat+","+lng),
+      calle: idx("direccion")>=0? r[idx("direccion")] : "",
+      ciudad: idx("localidad")>=0? r[idx("localidad")] : "Rosario",
+      lat, lng, estado,
+      nota: idx("nota")>=0? r[idx("nota")] : "",
+      fecha: idx("fecha")>=0? r[idx("fecha")] : hoy()
+    });
+    n++;
+  }
+  save(); refrescarTodo();
+  if(registros.length) map.fitBounds(registros.map(r=>[r.lat,r.lng]),{padding:[40,40]});
+  toast("Importados "+n+" registros");
+}
+
+/* ---------- Toast ---------- */
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ---------- Init ---------- */
+refrescarTodo();
+if(registros.length) map.fitBounds(registros.map(r=>[r.lat,r.lng]),{padding:[40,40]});
+</script>
+</body>
+</html>
