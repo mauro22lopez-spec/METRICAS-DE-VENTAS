@@ -3,43 +3,326 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Metricas de Ventas - Cobertura Medica</title>
+<title>Reporte de Cobertura — Grupos</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#1e3a5f,#0f172a);color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-  .wrap{max-width:640px;text-align:center}
-  .badge{display:inline-block;background:#1e293b;border:1px solid #334155;color:#38bdf8;font-size:.8rem;padding:5px 12px;border-radius:999px;margin-bottom:18px}
-  h1{font-size:2.1rem;line-height:1.15;margin-bottom:12px}
-  p.lead{color:#94a3b8;font-size:1.05rem;margin-bottom:28px}
-  .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-  .cta{display:inline-block;font-weight:700;text-decoration:none;padding:14px 26px;border-radius:10px;font-size:1.05rem}
-  .cta.primary{background:#38bdf8;color:#04283a}
-  .cta.primary:hover{background:#7dd3fc}
-  .cta.ghost{background:transparent;color:#38bdf8;border:1px solid #38bdf8}
-  .cta.ghost:hover{background:#1e293b}
-  .feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:36px;text-align:left}
-  .f{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px}
-  .f h3{font-size:.98rem;margin-bottom:6px;color:#e2e8f0}
-  .f p{font-size:.85rem;color:#94a3b8}
-  footer{margin-top:34px;color:#64748b;font-size:.8rem}
+:root{
+--bg:#0b1120; --panel:#111a2e; --panel2:#16213a; --line:#22304f;
+--text:#e6ecf7; --muted:#8fa0bd; --accent:#4cc3ff; --accent-soft:#173049;
+--venta:#34d399; --dato:#fbbf24; --ausente:#f87171; --obra:#a78bfa; --otro:#64748b;
+--radius:14px;
+--g-francolini:#4cc3ff; --g-mudry:#34d399; --g-zarate:#fbbf24; --g-ameli:#a78bfa;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh;padding:28px 18px 60px}
+.wrap{max-width:1100px;margin:0 auto}
+h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:.92rem;margin-top:6px;line-height:1.5}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px}
+.card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px}
+
+/* Carga */
+.tabs{display:flex;gap:10px;flex-wrap:wrap}
+.tab{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 18px;border-radius:10px;font-weight:600;font-size:.9rem;cursor:pointer}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#04121f}
+.tab:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.loadrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.8rem;color:var(--muted);font-weight:600}
+select,input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:9px;font-size:.9rem;min-width:180px}
+.fixedcol{display:inline-flex;align-items:center;gap:8px;background:var(--accent-soft);border:1px solid var(--line);color:var(--accent);padding:10px 14px;border-radius:9px;font-size:.88rem;font-weight:700}
+.fixedcol small{color:var(--muted);font-weight:500}
+textarea{width:100%;min-height:130px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:.82rem;margin-top:14px;display:none}
+.btn{background:var(--accent);color:#04121f;border:none;padding:11px 20px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.hint{color:var(--muted);font-size:.8rem;margin-top:10px}
+.msg{margin-top:12px;font-size:.86rem;font-weight:600;display:none;padding:10px 14px;border-radius:9px}
+.msg.ok{display:block;background:rgba(52,211,153,.12);color:var(--venta)}
+.msg.err{display:block;background:rgba(248,113,113,.12);color:var(--ausente)}
+input[type=file]{display:none}
+
+/* Cargas registradas */
+.loads{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.loaditem{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.86rem;gap:10px;flex-wrap:wrap}
+.loaditem .del{background:none;border:none;color:var(--ausente);cursor:pointer;font-weight:700;font-size:.82rem}
+.gtag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700}
+
+/* KPIs generales */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+.kpi .v{font-size:1.7rem;font-weight:800}
+.kpi .l{color:var(--muted);font-size:.78rem;margin-top:4px}
+.kpi .d{color:var(--muted);font-size:.72rem;margin-top:2px}
+
+/* Grupos */
+.groupgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px}
+.gcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;border-top:3px solid var(--gc,var(--accent))}
+.gcard h3{font-size:1rem;font-weight:800;display:flex;justify-content:space-between;align-items:center}
+.gcard h3 .n{color:var(--muted);font-size:.78rem;font-weight:600}
+.grate{font-size:1.5rem;font-weight:800;margin-top:10px}
+.grate small{color:var(--muted);font-size:.72rem;font-weight:500;display:block}
+.gstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;font-size:.8rem}
+.gstats span{display:flex;justify-content:space-between;background:var(--panel);border-radius:7px;padding:6px 9px}
+.gstats b{font-weight:700}
+.empty{color:var(--muted);font-size:.85rem;font-style:italic;margin-top:10px}
+
+/* Barrios */
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px}
+th{color:var(--muted);text-align:left;font-weight:600;font-size:.76rem;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+.st-venta{color:var(--venta);font-weight:700}
+.st-dato{color:var(--dato);font-weight:700}
+.st-ausente{color:var(--ausente);font-weight:700}
+.st-obra{color:var(--obra);font-weight:700}
+.tablewrap{overflow-x:auto}
+#dashboard{display:none}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="badge">Cobertura medica - visitas puerta a puerta</div>
-    <h1>Metricas de Ventas</h1>
-    <p class="lead">Registra cada visita en el momento desde el celular y convierte esos datos en un reporte con porcentajes de ausentes, contactos y ventas, y tus indicadores de conversion.</p>
-    <div class="ctas">
-      <a class="cta primary" href="app.html">Registrar visitas &rarr;</a>
-      <a class="cta ghost" href="reporte.html">Ver reporte</a>
-    </div>
-    <div class="feats">
-      <div class="f"><h3>Registro en campo</h3><p>Cargas la visita en el momento, con direccion geolocalizada y estado.</p></div>
-      <div class="f"><h3>% por estado</h3><p>Ausente, Dato, Venta y los que definas, con grafico de distribucion.</p></div>
-      <div class="f"><h3>Conversion real</h3><p>Ventas sobre gente que te atendio, tasa de contacto y ventas por 100 puertas.</p></div>
-      <div class="f"><h3>Ranking de zonas</h3><p>Que localidades convierten mejor por puerta tocada.</p></div>
-    </div>
-    <footer>Sin servidor ni API key. Los datos se procesan en tu navegador.</footer>
-  </div>
+<div class="wrap">
+<h1>Reporte de Cobertura</h1>
+<p class="sub">Cargá el CSV que exporta tu app, asignalo a un grupo y al barrio recorrido, y obtené las métricas por grupo y por barrio.</p>
+
+<!-- CARGA -->
+<div class="card">
+<div class="tabs">
+<button class="tab active" id="tabFile">Elegir CSV</button>
+<button class="tab" id="tabPaste">Pegar texto</button>
+<button class="tab" id="tabExample">Ver ejemplo</button>
+</div>
+
+<div class="loadrow">
+<div class="field">
+<label for="selGroup">Grupo</label>
+<select id="selGroup">
+<option value="Francolini">Francolini</option>
+<option value="Mudry">Mudry</option>
+<option value="Zarate">Zarate</option>
+<option value="Ameli">Ameli</option>
+</select>
+</div>
+<div class="field">
+<label for="inBarrio">Barrio recorrido</label>
+<input type="text" id="inBarrio" placeholder="Ej: Centro, Echesortu…">
+</div>
+<div class="field">
+<label>Columna de estado</label>
+<span class="fixedcol">Description <small>(fija)</small></span>
+</div>
+<button class="btn" id="btnLoad">Cargar datos</button>
+</div>
+
+<textarea id="pasteArea" placeholder="Pegá acá el contenido del CSV…"></textarea>
+<input type="file" id="fileInput" accept=".csv,.txt">
+<p class="hint">Detecta separador , o ; y reconoce estados como Ausente, Dato, Venta y Obra Social automáticamente desde la columna Description.</p>
+<div class="msg" id="msg"></div>
+
+<div class="loads" id="loadsList"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+<div class="card">
+<h2>Indicadores clave — todos los grupos</h2>
+<div class="kpis" id="kpisGlobal"></div>
+</div>
+
+<div class="card">
+<h2>Comparativa por grupo</h2>
+<div class="groupgrid" id="groupGrid"></div>
+</div>
+
+<div class="card">
+<h2>Métricas por barrio</h2>
+<div class="tablewrap">
+<table id="barrioTable">
+<thead>
+<tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th>
+<th class="st-venta">Ventas</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th></tr>
+</thead>
+<tbody></tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+const GROUPS=["Francolini","Mudry","Zarate","Ameli"];
+const GCOLORS={Francolini:"var(--g-francolini)",Mudry:"var(--g-mudry)",Zarate:"var(--g-zarate)",Ameli:"var(--g-ameli)"};
+let loads=[]; // {group, barrio, rows:[{status}], name}
+let mode="file";
+
+const $=id=>document.getElementById(id);
+
+/* ---- tabs ---- */
+$("tabFile").onclick=()=>setMode("file");
+$("tabPaste").onclick=()=>setMode("paste");
+$("tabExample").onclick=showExample;
+function setMode(m){
+mode=m;
+$("tabFile").classList.toggle("active",m==="file");
+$("tabPaste").classList.toggle("active",m==="paste");
+$("pasteArea").style.display=m==="paste"?"block":"none";
+}
+function showExample(){
+setMode("paste");
+$("pasteArea").value=
+'Folder name,Folder color,Latitude,Longitude,Title,Description,Color,Phone number,Timestamp,Pin icon code\n'+
+',71b300,-32.942652,-60.640077,av belgrano 901,VENTA,,,2026-08-06T13:35:49Z,-1\n'+
+',71b300,-32.943312,-60.640243,ENTRE RIOS 524,obra social,,,2026-08-06T14:28:33Z,-1\n'+
+',71b300,-32.943021,-60.640248,entre rios 537,ausente,,,2026-08-06T13:35:13Z,-1\n'+
+',71b300,-32.942517,-60.639723,mitre 4521,DATO,,,2026-08-06T13:37:46Z,-1';
+}
+
+/* ---- carga ---- */
+$("btnLoad").onclick=()=>{
+if(!$("inBarrio").value.trim()){showMsg("Escribí el nombre del barrio antes de cargar.",false);return;}
+if(mode==="paste"){
+if(!$("pasteArea").value.trim()){showMsg("Pegá el contenido del CSV primero.",false);return;}
+ingest($("pasteArea").value,"texto pegado");
+}else{
+$("fileInput").click();
+}
+};
+$("fileInput").onchange=e=>{
+const f=e.target.files[0]; if(!f)return;
+const r=new FileReader();
+r.onload=()=>ingest(r.result,f.name);
+r.readAsText(f);
+e.target.value="";
+};
+
+function ingest(text,name){
+try{
+const rows=parseCSV(text);
+if(!rows.length) throw new Error("No se encontraron filas de datos.");
+const header=rows[0].map(h=>h.trim().toLowerCase());
+const di=header.indexOf("description");
+if(di===-1) throw new Error('El CSV no tiene la columna "Description". Verificá el export.');
+const data=rows.slice(1).filter(r=>r.length>di).map(r=>({status:normStatus(r[di])}));
+if(!data.length) throw new Error("El CSV no tiene registros debajo del encabezado.");
+loads.push({group:$("selGroup").value,barrio:$("inBarrio").value.trim(),rows:data,name});
+$("inBarrio").value=""; if(mode==="paste")$("pasteArea").value="";
+showMsg(`Cargados ${data.length} registros para ${loads[loads.length-1].group} — ${loads[loads.length-1].barrio}.`,true);
+render();
+}catch(err){showMsg(err.message,false);}
+}
+function showMsg(t,ok){const m=$("msg");m.textContent=t;m.className="msg "+(ok?"ok":"err");}
+
+/* CSV parser: soporta , y ; con campos entre comillas */
+function parseCSV(text){
+const sep=detectSep(text);
+const rows=[];let row=[],cur="",q=false;
+for(let i=0;i<text.length;i++){
+const c=text[i];
+if(q){
+if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; }
+else cur+=c;
+}else{
+if(c==='"')q=true;
+else if(c===sep){row.push(cur);cur="";}
+else if(c==='\n'||c==='\r'){
+if(c==='\r'&&text[i+1]==='\n')i++;
+row.push(cur);cur="";
+if(row.some(x=>x.trim()!==""))rows.push(row);
+row=[];
+}else cur+=c;
+}
+}
+row.push(cur);
+if(row.some(x=>x.trim()!==""))rows.push(row);
+return rows;
+}
+function detectSep(text){
+const first=text.split(/\r?\n/)[0]||"";
+return (first.split(";").length>first.split(",").length)?";":",";
+}
+function normStatus(raw){
+const s=(raw||"").toLowerCase().replace(/\\n/g,"").trim();
+if(s.includes("venta"))return"venta";
+if(s.includes("dato"))return"dato";
+if(s.includes("obra"))return"obra";
+if(s.includes("ausente"))return"ausente";
+return s?"otro":"otro";
+}
+
+/* ---- métricas ---- */
+function stats(rows){
+const t={total:rows.length,venta:0,dato:0,obra:0,ausente:0,otro:0};
+rows.forEach(r=>t[r.status]++);
+t.atendidos=t.total-t.ausente;
+t.tasa=t.total? (t.atendidos/t.total*100):0;
+return t;
+}
+const pct=v=>v.toFixed(1).replace(".",",")+"%";
+
+/* ---- render ---- */
+function render(){
+renderLoads();
+const has=loads.length>0;
+$("dashboard").style.display=has?"block":"none";
+if(!has)return;
+
+// KPIs globales
+const all=stats(loads.flatMap(l=>l.rows));
+$("kpisGlobal").innerHTML=`
+<div class="kpi"><div class="v" style="color:var(--accent)">${pct(all.tasa)}</div><div class="l">Tasa de contacto</div><div class="d">${all.atendidos} de ${all.total} te atendieron</div></div>
+<div class="kpi"><div class="v">${all.total}</div><div class="l">Visitas totales</div></div>
+<div class="kpi"><div class="v st-venta">${all.venta}</div><div class="l">Ventas</div></div>
+<div class="kpi"><div class="v st-dato">${all.dato}</div><div class="l">Datos</div></div>
+<div class="kpi"><div class="v st-obra">${all.obra}</div><div class="l">Obra social</div></div>
+<div class="kpi"><div class="v st-ausente">${all.ausente}</div><div class="l">Ausentes</div></div>`;
+
+// Grupos
+$("groupGrid").innerHTML=GROUPS.map(g=>{
+const gl=loads.filter(l=>l.group===g);
+if(!gl.length)return `<div class="gcard" style="--gc:${GCOLORS[g]}"><h3>${g}</h3><p class="empty">Sin datos cargados todavía.</p></div>`;
+const s=stats(gl.flatMap(l=>l.rows));
+const barrios=[...new Set(gl.map(l=>l.barrio))].join(", ");
+return `<div class="gcard" style="--gc:${GCOLORS[g]}">
+<h3>${g} <span class="n">${gl.length} carga${gl.length>1?"s":""}</span></h3>
+<div class="grate" style="color:${GCOLORS[g]}">${pct(s.tasa)}<small>tasa de contacto — ${s.atendidos} de ${s.total}</small></div>
+<div class="gstats">
+<span>Ventas <b class="st-venta">${s.venta}</b></span>
+<span>Datos <b class="st-dato">${s.dato}</b></span>
+<span>Obra social <b class="st-obra">${s.obra}</b></span>
+<span>Ausentes <b class="st-ausente">${s.ausente}</b></span>
+</div>
+<p class="empty" style="margin-top:10px">Barrios: ${barrios}</p>
+</div>`;
+}).join("");
+
+// Tabla barrios (una fila por carga grupo+barrio, agrupando cargas repetidas del mismo grupo+barrio)
+const map=new Map();
+loads.forEach(l=>{
+const k=l.group+"||"+l.barrio;
+if(!map.has(k))map.set(k,{group:l.group,barrio:l.barrio,rows:[]});
+map.get(k).rows.push(...l.rows);
+});
+$("barrioTable").querySelector("tbody").innerHTML=[...map.values()].map(e=>{
+const s=stats(e.rows);
+return `<tr>
+<td><b>${e.barrio}</b></td>
+<td><span class="gtag" style="color:${GCOLORS[e.group]};border:1px solid ${GCOLORS[e.group]}">${e.group}</span></td>
+<td>${s.total}</td><td>${s.atendidos}</td><td><b>${pct(s.tasa)}</b></td>
+<td class="st-venta">${s.venta}</td><td class="st-dato">${s.dato}</td>
+<td class="st-obra">${s.obra}</td><td class="st-ausente">${s.ausente}</td>
+</tr>`;
+}).join("");
+}
+
+function renderLoads(){
+$("loadsList").innerHTML=loads.map((l,i)=>`
+<div class="loaditem">
+<span><span class="gtag" style="color:${GCOLORS[l.group]};border:1px solid ${GCOLORS[l.group]}">${l.group}</span>
+&nbsp;<b>${l.barrio}</b> — ${l.rows.length} registros <span style="color:var(--muted)">(${l.name})</span></span>
+<button class="del" data-i="${i}">Quitar</button>
+</div>`).join("");
+document.querySelectorAll(".del").forEach(b=>b.onclick=()=>{loads.splice(+b.dataset.i,1);render();});
+}
+</script>
 </body>
 </html>
