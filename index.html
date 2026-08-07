@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reporte de Cobertura — Grupos</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{
 --panel:rgba(17,26,46,.82); --panel2:rgba(22,33,58,.85); --line:rgba(255,255,255,.14);
@@ -15,7 +16,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:linear-gradient(135deg,#2f5b82 0%,#4a4a6e 38%,#7c4e5d 62%,#b23a42 100%) fixed;color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh;padding:28px 18px 60px}
-.wrap{max-width:1100px;margin:0 auto}
+.wrap{max-width:1200px;margin:0 auto}
 .brandbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .logobox{background:#ffffff;border-radius:12px;padding:10px 16px;display:inline-flex;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.35)}
 .logobox img{height:38px;display:block}
@@ -84,15 +85,53 @@ tr:last-child td{border-bottom:none}
 .tablewrap{overflow-x:auto}
 #dashboard{display:none}
 
+/* ===== LAYOUT DOS COLUMNAS ===== */
+.dashboard-grid{
+  display:grid;
+  grid-template-columns:1fr 400px;
+  gap:22px;
+  align-items:start;
+}
+.dashboard-left{
+  display:flex;
+  flex-direction:column;
+  gap:0;
+}
+.dashboard-left .card{
+  margin-top:22px;
+}
+.dashboard-left .card:first-child{
+  margin-top:0;
+}
+.dashboard-right{
+  position:sticky;
+  top:22px;
+}
+.dashboard-right .contactos-card{
+  margin-top:0;
+}
+@media (max-width:960px){
+  .dashboard-grid{
+    grid-template-columns:1fr;
+  }
+  .dashboard-right{
+    position:static;
+  }
+  .dashboard-right .contactos-card{
+    margin-top:22px;
+  }
+}
+
 /* ===== BASE DE DATOS DE CONTACTOS ===== */
-.contactos-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px;backdrop-filter:blur(6px)}
-.contactos-card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.contactos-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;backdrop-filter:blur(6px);max-height:calc(100vh - 44px);display:flex;flex-direction:column}
+.contactos-card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .contactos-card h2 .badge{background:var(--dato);color:#1a1500;font-size:.72rem;padding:3px 10px;border-radius:999px;font-weight:800}
-.contactos-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
-.contactos-toolbar .filtro-label{color:var(--muted);font-size:.8rem;font-weight:600}
-.contactos-toolbar select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:9px;font-size:.85rem;min-width:160px}
-.contactos-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:6px}
-.contactos-table th{color:var(--muted);text-align:left;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.contactos-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;flex-shrink:0}
+.contactos-toolbar .filtro-label{color:var(--muted);font-size:.8rem;font-weight:600;align-self:center}
+.contactos-toolbar select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:9px;font-size:.85rem;min-width:140px;flex:1}
+.contactos-table-wrap{overflow-y:auto;flex:1;min-height:200px;max-height:55vh}
+.contactos-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.contactos-table th{color:var(--muted);text-align:left;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--panel2);z-index:1}
 .contactos-table td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
 .contactos-table tr:last-child td{border-bottom:none}
 .contactos-table .c-dir{color:var(--text);font-weight:600}
@@ -101,7 +140,7 @@ tr:last-child td{border-bottom:none}
 .contactos-table .c-grupo{font-size:.75rem;padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid}
 .contactos-table .c-barrio{color:var(--muted);font-size:.78rem}
 .contactos-empty{color:var(--muted);font-size:.9rem;font-style:italic;padding:20px 0;text-align:center}
-.export-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.export-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;flex-shrink:0}
 </style>
 <base target="_blank">
 </head>
@@ -151,6 +190,10 @@ tr:last-child td{border-bottom:none}
 
 <!-- DASHBOARD -->
 <div id="dashboard">
+<div class="dashboard-grid">
+
+<!-- COLUMNA IZQUIERDA -->
+<div class="dashboard-left">
 <div class="card">
 <h2>Indicadores clave — todos los grupos</h2>
 <div class="kpis" id="kpisGlobal"></div>
@@ -173,14 +216,15 @@ tr:last-child td{border-bottom:none}
 </table>
 </div>
 </div>
+</div>
 
-<!-- ===== BASE DE DATOS DE CONTACTOS ===== -->
+<!-- COLUMNA DERECHA -->
+<div class="dashboard-right">
 <div class="contactos-card" id="contactosCard">
-<h2>Base de datos de contactos <span class="badge" id="contactosBadge">0</span></h2>
-<p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Acá se acumulan todos los registros con estado <b class="st-dato">Dato</b> (contactos capturados) para que puedas armar tu base de seguimiento. Incluye dirección, teléfono, fecha y grupo.</p>
+<h2>Base de contactos <span class="badge" id="contactosBadge">0</span></h2>
+<p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Registros con estado <b class="st-dato">Dato</b> listos para seguimiento.</p>
 
 <div class="contactos-toolbar">
-<span class="filtro-label">Filtrar por grupo:</span>
 <select id="filtroContactos">
 <option value="todos">Todos los grupos</option>
 <option value="Francolini">Francolini</option>
@@ -193,25 +237,26 @@ tr:last-child td{border-bottom:none}
 </select>
 </div>
 
-<div class="tablewrap">
+<div class="contactos-table-wrap">
 <table class="contactos-table" id="contactosTable">
 <thead>
 <tr>
 <th>Dirección</th>
 <th>Teléfono</th>
-<th>Fecha / Hora</th>
+<th>Fecha</th>
 <th>Grupo</th>
 <th>Barrio</th>
 </tr>
 </thead>
 <tbody id="contactosBody"></tbody>
 </table>
-</div>
 <div class="contactos-empty" id="contactosEmpty" style="display:none">No hay contactos capturados todavía. Cuando cargues registros con estado <b>Dato</b> aparecerán acá.</div>
+</div>
 
 <div class="export-btns">
-<button class="btn secondary" id="btnCopiar" title="Copiar al portapapeles en formato tabla">📋 Copiar contactos</button>
-<button class="btn secondary" id="btnExportCSV" title="Descargar como CSV">📥 Exportar CSV</button>
+<button class="btn secondary" id="btnCopiar" title="Copiar al portapapeles en formato tabla">📋 Copiar</button>
+<button class="btn secondary" id="btnExportExcel" title="Descargar como Excel .xlsx">📥 Exportar Excel</button>
+</div>
 </div>
 </div>
 
@@ -221,7 +266,7 @@ tr:last-child td{border-bottom:none}
 <script>
 const GROUPS=["Francolini","Mudry","Zarate","Ameli"];
 const GCOLORS={Francolini:"var(--g-francolini)",Mudry:"var(--g-mudry)",Zarate:"var(--g-zarate)",Ameli:"var(--g-ameli)"};
-let loads=[]; // {group, barrio, rows:[{status,dir,tel,fecha}], name}
+let loads=[];
 let mode="file";
 
 const $=id=>document.getElementById(id);
@@ -289,7 +334,7 @@ render();
 }
 function showMsg(t,ok){const m=$("msg");m.textContent=t;m.className="msg "+(ok?"ok":"err");}
 
-/* CSV parser: soporta , y ; con campos entre comillas */
+/* CSV parser */
 function parseCSV(text){
 const sep=detectSep(text);
 const rows=[];let row=[],cur="",q=false;
@@ -400,7 +445,7 @@ return `<tr>
 </tr>`;
 }).join("");
 
-// ===== BASE DE CONTACTOS =====
+// Base de contactos
 renderContactos();
 }
 
@@ -410,7 +455,6 @@ const barriosUnicos=[...new Set(loads.map(l=>l.barrio))].sort();
 const sel=$("filtroBarrioContactos");
 sel.innerHTML='<option value="todos">Todos los barrios</option>'+barriosUnicos.map(b=>`<option value="${b}">${b}</option>`).join("");
 
-// Filtrar contactos (estado === "dato")
 const grupoFiltro=$("filtroContactos").value;
 const barrioFiltro=$("filtroBarrioContactos").value;
 
@@ -425,7 +469,6 @@ contactos.push({...r,group:l.group,barrio:l.barrio});
 });
 });
 
-// Ordenar por fecha descendente
 contactos.sort((a,b)=>{
 const fa=a.fecha?new Date(a.fecha):new Date(0);
 const fb=b.fecha?new Date(b.fecha):new Date(0);
@@ -439,12 +482,12 @@ if(!contactos.length){
 tbody.innerHTML="";
 $("contactosEmpty").style.display="block";
 $("btnCopiar").style.display="none";
-$("btnExportCSV").style.display="none";
+$("btnExportExcel").style.display="none";
 return;
 }
 $("contactosEmpty").style.display="none";
 $("btnCopiar").style.display="inline-block";
-$("btnExportCSV").style.display="inline-block";
+$("btnExportExcel").style.display="inline-block";
 
 tbody.innerHTML=contactos.map(c=>{
 const gColor=GCOLORS[c.group]||"var(--accent)";
@@ -464,26 +507,40 @@ $("filtroBarrioContactos").onchange=renderContactos;
 
 /* ---- copiar contactos ---- */
 $("btnCopiar").onclick=()=>{
-const grupoFiltro=$("filtroContactos").value;
-const barrioFiltro=$("filtroBarrioContactos").value;
-let contactos=[];
-loads.forEach(l=>{
-if(grupoFiltro!=="todos" && l.group!==grupoFiltro)return;
-if(barrioFiltro!=="todos" && l.barrio!==barrioFiltro)return;
-l.rows.forEach(r=>{if(r.status==="dato")contactos.push({...r,group:l.group,barrio:l.barrio});});
-});
-contactos.sort((a,b)=>{const fa=a.fecha?new Date(a.fecha):new Date(0);const fb=b.fecha?new Date(b.fecha):new Date(0);return fb-fa;});
+const contactos=getContactosFiltrados();
 const lines=["Dirección\tTeléfono\tFecha\tGrupo\tBarrio"];
 contactos.forEach(c=>lines.push(`${c.dir||""}\t${c.tel||""}\t${fmtFecha(c.fecha)}\t${c.group}\t${c.barrio}`));
 navigator.clipboard.writeText(lines.join("\n")).then(()=>{
 showMsg("Contactos copiados al portapapeles. Pegalos en Excel.",true);
 }).catch(()=>{
-showMsg("No se pudo copiar automáticamente. Usá Exportar CSV.",false);
+showMsg("No se pudo copiar automáticamente. Usá Exportar Excel.",false);
 });
 };
 
-/* ---- exportar CSV contactos ---- */
-$("btnExportCSV").onclick=()=>{
+/* ---- exportar Excel (.xlsx) ---- */
+$("btnExportExcel").onclick=()=>{
+if(typeof XLSX==="undefined"){
+showMsg("Librería Excel cargando… probá de nuevo en unos segundos.",false);
+return;
+}
+const contactos=getContactosFiltrados();
+if(!contactos.length){
+showMsg("No hay contactos para exportar.",false);
+return;
+}
+const data=[
+["Dirección","Teléfono","Fecha","Grupo","Barrio"],
+...contactos.map(c=>[c.dir||"",c.tel||"",fmtFecha(c.fecha),c.group,c.barrio])
+];
+const ws=XLSX.utils.aoa_to_sheet(data);
+const wb=XLSX.utils.book_new();
+XLSX.utils.book_append_sheet(wb,ws,"Contactos");
+const fecha=new Date().toISOString().slice(0,10);
+XLSX.writeFile(wb,`contactos_previnca_${fecha}.xlsx`);
+showMsg("Excel descargado correctamente.",true);
+};
+
+function getContactosFiltrados(){
 const grupoFiltro=$("filtroContactos").value;
 const barrioFiltro=$("filtroBarrioContactos").value;
 let contactos=[];
@@ -493,20 +550,8 @@ if(barrioFiltro!=="todos" && l.barrio!==barrioFiltro)return;
 l.rows.forEach(r=>{if(r.status==="dato")contactos.push({...r,group:l.group,barrio:l.barrio});});
 });
 contactos.sort((a,b)=>{const fa=a.fecha?new Date(a.fecha):new Date(0);const fb=b.fecha?new Date(b.fecha):new Date(0);return fb-fa;});
-const header="Direccion,Telefono,Fecha,Grupo,Barrio";
-const rows=contactos.map(c=>`"${(c.dir||"").replace(/"/g,'""')}","${(c.tel||"").replace(/"/g,'""')}","${fmtFecha(c.fecha)}","${c.group}","${c.barrio}"`);
-const csv=[header,...rows].join("\n");
-const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-const url=URL.createObjectURL(blob);
-const a=document.createElement("a");
-a.href=url;
-a.download="contactos_previnca_"+new Date().toISOString().slice(0,10)+".csv";
-document.body.appendChild(a);
-a.click();
-document.body.removeChild(a);
-URL.revokeObjectURL(url);
-showMsg("CSV de contactos descargado.",true);
-};
+return contactos;
+}
 
 function renderLoads(){
 $("loadsList").innerHTML=loads.map((l,i)=>`
