@@ -40,6 +40,7 @@ textarea{width:100%;min-height:130px;background:var(--panel2);border:1px solid v
 .btn{background:var(--accent);color:#04283a;border:none;padding:11px 20px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer}
 .btn:hover{background:var(--accent-hover)}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.secondary{background:var(--panel2);color:var(--accent);border:1px solid var(--accent)}
 .hint{color:var(--muted);font-size:.8rem;margin-top:10px}
 .msg{margin-top:12px;font-size:.86rem;font-weight:600;display:none;padding:10px 14px;border-radius:9px}
 .msg.ok{display:block;background:rgba(52,211,153,.16);color:#6ee7b7}
@@ -82,14 +83,34 @@ tr:last-child td{border-bottom:none}
 .st-obra{color:var(--obra);font-weight:700}
 .tablewrap{overflow-x:auto}
 #dashboard{display:none}
+
+/* ===== BASE DE DATOS DE CONTACTOS ===== */
+.contactos-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px;backdrop-filter:blur(6px)}
+.contactos-card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.contactos-card h2 .badge{background:var(--dato);color:#1a1500;font-size:.72rem;padding:3px 10px;border-radius:999px;font-weight:800}
+.contactos-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.contactos-toolbar .filtro-label{color:var(--muted);font-size:.8rem;font-weight:600}
+.contactos-toolbar select{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:8px 12px;border-radius:9px;font-size:.85rem;min-width:160px}
+.contactos-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:6px}
+.contactos-table th{color:var(--muted);text-align:left;font-weight:600;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+.contactos-table td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.contactos-table tr:last-child td{border-bottom:none}
+.contactos-table .c-dir{color:var(--text);font-weight:600}
+.contactos-table .c-tel{color:var(--accent);font-weight:600;font-family:ui-monospace,monospace}
+.contactos-table .c-fecha{color:var(--muted);font-size:.75rem}
+.contactos-table .c-grupo{font-size:.75rem;padding:2px 8px;border-radius:999px;font-weight:700;border:1px solid}
+.contactos-table .c-barrio{color:var(--muted);font-size:.78rem}
+.contactos-empty{color:var(--muted);font-size:.9rem;font-style:italic;padding:20px 0;text-align:center}
+.export-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
 </style>
+<base target="_blank">
 </head>
 <body>
 <div class="wrap">
 <div class="brandbar">
 <span class="logobox"><img src="https://previncasalud.com.ar/wp-content/uploads/2023/10/logo-previnca.svg" alt="Previnca Salud"></span>
 </div>
-<p class="sub">Cargá el CSV que exporta tu app, asignalo a un grupo y al barrio recorrido, y obtené las métricas por grupo y por barrio.</p>
+<p class="sub">Cargá el CSV que exporta tu app, asignalo a un grupo y al barrio recorrido, y obtené las métricas por grupo y por barrio. Los registros con estado <b>"Dato"</b> se acumulan automáticamente en la base de contactos para seguimiento.</p>
 
 <!-- CARGA -->
 <div class="card">
@@ -122,7 +143,7 @@ tr:last-child td{border-bottom:none}
 
 <textarea id="pasteArea" placeholder="Pegá acá el contenido del CSV…"></textarea>
 <input type="file" id="fileInput" accept=".csv,.txt">
-<p class="hint">Detecta separador , o ; y reconoce estados como Ausente, Dato, Venta y Obra Social automáticamente desde la columna Description.</p>
+<p class="hint">Detecta separador , o ; y reconoce estados como Ausente, Dato, Venta y Obra Social automáticamente desde la columna Description. También extrae dirección, teléfono y fecha para la base de contactos.</p>
 <div class="msg" id="msg"></div>
 
 <div class="loads" id="loadsList"></div>
@@ -152,13 +173,55 @@ tr:last-child td{border-bottom:none}
 </table>
 </div>
 </div>
+
+<!-- ===== BASE DE DATOS DE CONTACTOS ===== -->
+<div class="contactos-card" id="contactosCard">
+<h2>Base de datos de contactos <span class="badge" id="contactosBadge">0</span></h2>
+<p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Acá se acumulan todos los registros con estado <b class="st-dato">Dato</b> (contactos capturados) para que puedas armar tu base de seguimiento. Incluye dirección, teléfono, fecha y grupo.</p>
+
+<div class="contactos-toolbar">
+<span class="filtro-label">Filtrar por grupo:</span>
+<select id="filtroContactos">
+<option value="todos">Todos los grupos</option>
+<option value="Francolini">Francolini</option>
+<option value="Mudry">Mudry</option>
+<option value="Zarate">Zarate</option>
+<option value="Ameli">Ameli</option>
+</select>
+<select id="filtroBarrioContactos">
+<option value="todos">Todos los barrios</option>
+</select>
+</div>
+
+<div class="tablewrap">
+<table class="contactos-table" id="contactosTable">
+<thead>
+<tr>
+<th>Dirección</th>
+<th>Teléfono</th>
+<th>Fecha / Hora</th>
+<th>Grupo</th>
+<th>Barrio</th>
+</tr>
+</thead>
+<tbody id="contactosBody"></tbody>
+</table>
+</div>
+<div class="contactos-empty" id="contactosEmpty" style="display:none">No hay contactos capturados todavía. Cuando cargues registros con estado <b>Dato</b> aparecerán acá.</div>
+
+<div class="export-btns">
+<button class="btn secondary" id="btnCopiar" title="Copiar al portapapeles en formato tabla">📋 Copiar contactos</button>
+<button class="btn secondary" id="btnExportCSV" title="Descargar como CSV">📥 Exportar CSV</button>
+</div>
+</div>
+
 </div>
 </div>
 
 <script>
 const GROUPS=["Francolini","Mudry","Zarate","Ameli"];
 const GCOLORS={Francolini:"var(--g-francolini)",Mudry:"var(--g-mudry)",Zarate:"var(--g-zarate)",Ameli:"var(--g-ameli)"};
-let loads=[]; // {group, barrio, rows:[{status}], name}
+let loads=[]; // {group, barrio, rows:[{status,dir,tel,fecha}], name}
 let mode="file";
 
 const $=id=>document.getElementById(id);
@@ -207,8 +270,16 @@ const rows=parseCSV(text);
 if(!rows.length) throw new Error("No se encontraron filas de datos.");
 const header=rows[0].map(h=>h.trim().toLowerCase());
 const di=header.indexOf("description");
+const ti=header.indexOf("title");
+const pi=header.indexOf("phone number");
+const fi=header.indexOf("timestamp");
 if(di===-1) throw new Error('El CSV no tiene la columna "Description". Verificá el export.');
-const data=rows.slice(1).filter(r=>r.length>di).map(r=>({status:normStatus(r[di])}));
+const data=rows.slice(1).filter(r=>r.length>di).map(r=>({
+status:normStatus(r[di]),
+dir: ti>=0 ? (r[ti]||"").trim() : "",
+tel: pi>=0 ? (r[pi]||"").trim() : "",
+fecha: fi>=0 ? (r[fi]||"").trim() : ""
+}));
 if(!data.length) throw new Error("El CSV no tiene registros debajo del encabezado.");
 loads.push({group:$("selGroup").value,barrio:$("inBarrio").value.trim(),rows:data,name});
 $("inBarrio").value=""; if(mode==="paste")$("pasteArea").value="";
@@ -265,6 +336,16 @@ return t;
 }
 const pct=v=>v.toFixed(1).replace(".",",")+"%";
 
+/* ---- utilidades fecha ---- */
+function fmtFecha(iso){
+if(!iso)return"—";
+try{
+const d=new Date(iso);
+if(isNaN(d))return iso;
+return d.toLocaleString("es-AR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}catch(e){return iso;}
+}
+
 /* ---- render ---- */
 function render(){
 renderLoads();
@@ -301,7 +382,7 @@ return `<div class="gcard" style="--gc:${GCOLORS[g]}">
 </div>`;
 }).join("");
 
-// Tabla barrios (una fila por carga grupo+barrio, agrupando cargas repetidas del mismo grupo+barrio)
+// Tabla barrios
 const map=new Map();
 loads.forEach(l=>{
 const k=l.group+"||"+l.barrio;
@@ -318,7 +399,114 @@ return `<tr>
 <td class="st-obra">${s.obra}</td><td class="st-ausente">${s.ausente}</td>
 </tr>`;
 }).join("");
+
+// ===== BASE DE CONTACTOS =====
+renderContactos();
 }
+
+function renderContactos(){
+// Actualizar opciones de filtro de barrios
+const barriosUnicos=[...new Set(loads.map(l=>l.barrio))].sort();
+const sel=$("filtroBarrioContactos");
+sel.innerHTML='<option value="todos">Todos los barrios</option>'+barriosUnicos.map(b=>`<option value="${b}">${b}</option>`).join("");
+
+// Filtrar contactos (estado === "dato")
+const grupoFiltro=$("filtroContactos").value;
+const barrioFiltro=$("filtroBarrioContactos").value;
+
+let contactos=[];
+loads.forEach(l=>{
+if(grupoFiltro!=="todos" && l.group!==grupoFiltro)return;
+if(barrioFiltro!=="todos" && l.barrio!==barrioFiltro)return;
+l.rows.forEach(r=>{
+if(r.status==="dato"){
+contactos.push({...r,group:l.group,barrio:l.barrio});
+}
+});
+});
+
+// Ordenar por fecha descendente
+contactos.sort((a,b)=>{
+const fa=a.fecha?new Date(a.fecha):new Date(0);
+const fb=b.fecha?new Date(b.fecha):new Date(0);
+return fb-fa;
+});
+
+$("contactosBadge").textContent=contactos.length;
+
+const tbody=$("contactosBody");
+if(!contactos.length){
+tbody.innerHTML="";
+$("contactosEmpty").style.display="block";
+$("btnCopiar").style.display="none";
+$("btnExportCSV").style.display="none";
+return;
+}
+$("contactosEmpty").style.display="none";
+$("btnCopiar").style.display="inline-block";
+$("btnExportCSV").style.display="inline-block";
+
+tbody.innerHTML=contactos.map(c=>{
+const gColor=GCOLORS[c.group]||"var(--accent)";
+return `<tr>
+<td class="c-dir">${c.dir||"—"}</td>
+<td class="c-tel">${c.tel||"—"}</td>
+<td class="c-fecha">${fmtFecha(c.fecha)}</td>
+<td><span class="c-grupo" style="color:${gColor};border-color:${gColor}">${c.group}</span></td>
+<td class="c-barrio">${c.barrio}</td>
+</tr>`;
+}).join("");
+}
+
+/* ---- listeners filtros contactos ---- */
+$("filtroContactos").onchange=renderContactos;
+$("filtroBarrioContactos").onchange=renderContactos;
+
+/* ---- copiar contactos ---- */
+$("btnCopiar").onclick=()=>{
+const grupoFiltro=$("filtroContactos").value;
+const barrioFiltro=$("filtroBarrioContactos").value;
+let contactos=[];
+loads.forEach(l=>{
+if(grupoFiltro!=="todos" && l.group!==grupoFiltro)return;
+if(barrioFiltro!=="todos" && l.barrio!==barrioFiltro)return;
+l.rows.forEach(r=>{if(r.status==="dato")contactos.push({...r,group:l.group,barrio:l.barrio});});
+});
+contactos.sort((a,b)=>{const fa=a.fecha?new Date(a.fecha):new Date(0);const fb=b.fecha?new Date(b.fecha):new Date(0);return fb-fa;});
+const lines=["Dirección\tTeléfono\tFecha\tGrupo\tBarrio"];
+contactos.forEach(c=>lines.push(`${c.dir||""}\t${c.tel||""}\t${fmtFecha(c.fecha)}\t${c.group}\t${c.barrio}`));
+navigator.clipboard.writeText(lines.join("\n")).then(()=>{
+showMsg("Contactos copiados al portapapeles. Pegalos en Excel.",true);
+}).catch(()=>{
+showMsg("No se pudo copiar automáticamente. Usá Exportar CSV.",false);
+});
+};
+
+/* ---- exportar CSV contactos ---- */
+$("btnExportCSV").onclick=()=>{
+const grupoFiltro=$("filtroContactos").value;
+const barrioFiltro=$("filtroBarrioContactos").value;
+let contactos=[];
+loads.forEach(l=>{
+if(grupoFiltro!=="todos" && l.group!==grupoFiltro)return;
+if(barrioFiltro!=="todos" && l.barrio!==barrioFiltro)return;
+l.rows.forEach(r=>{if(r.status==="dato")contactos.push({...r,group:l.group,barrio:l.barrio});});
+});
+contactos.sort((a,b)=>{const fa=a.fecha?new Date(a.fecha):new Date(0);const fb=b.fecha?new Date(b.fecha):new Date(0);return fb-fa;});
+const header="Direccion,Telefono,Fecha,Grupo,Barrio";
+const rows=contactos.map(c=>`"${(c.dir||"").replace(/"/g,'""')}","${(c.tel||"").replace(/"/g,'""')}","${fmtFecha(c.fecha)}","${c.group}","${c.barrio}"`);
+const csv=[header,...rows].join("\n");
+const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+const url=URL.createObjectURL(blob);
+const a=document.createElement("a");
+a.href=url;
+a.download="contactos_previnca_"+new Date().toISOString().slice(0,10)+".csv";
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+URL.revokeObjectURL(url);
+showMsg("CSV de contactos descargado.",true);
+};
 
 function renderLoads(){
 $("loadsList").innerHTML=loads.map((l,i)=>`
