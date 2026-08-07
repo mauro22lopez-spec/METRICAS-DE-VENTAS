@@ -6,23 +6,22 @@
 <title>Reporte de Cobertura — Grupos</title>
 <style>
 :root{
---bg:#0b1120; --panel:#111a2e; --panel2:#16213a; --line:#28345a;
---text:#e6ecf7; --muted:#9aa7c4; --accent:#80bbb3; --accent-hover:#a1d0c9; --accent-soft:#1c2c3c;
+--panel:rgba(17,26,46,.82); --panel2:rgba(22,33,58,.85); --line:rgba(255,255,255,.14);
+--text:#eef2fb; --muted:#c3cbdd; --accent:#80bbb3; --accent-hover:#a1d0c9; --accent-soft:rgba(128,187,179,.16);
 --brand:#4f587d; --brand-soft:#5c6690;
---venta:#34d399; --dato:#fbbf24; --ausente:#f87171; --obra:#a78bfa; --otro:#64748b;
+--venta:#34d399; --dato:#fbbf24; --ausente:#f87171; --obra:#c4b5fd; --otro:#94a3b8;
 --radius:14px;
---g-francolini:#4cc3ff; --g-mudry:#34d399; --g-zarate:#fbbf24; --g-ameli:#a78bfa;
+--g-francolini:#4cc3ff; --g-mudry:#34d399; --g-zarate:#fbbf24; --g-ameli:#c4b5fd;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:radial-gradient(1100px 500px at 50% -8%,#1b2444,#0b1120);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh;padding:28px 18px 60px}
+body{background:linear-gradient(135deg,#2f5b82 0%,#4a4a6e 38%,#7c4e5d 62%,#b23a42 100%) fixed;color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh;padding:28px 18px 60px}
 .wrap{max-width:1100px;margin:0 auto}
 .brandbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.logobox{background:#ffffff;border-radius:12px;padding:10px 16px;display:inline-flex;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.25)}
-.logobox img{height:34px;display:block}
-h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em}
-.sub{color:var(--muted);font-size:.92rem;margin-top:6px;line-height:1.5}
+.logobox{background:#ffffff;border-radius:12px;padding:10px 16px;display:inline-flex;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+.logobox img{height:38px;display:block}
+.sub{color:var(--muted);font-size:.92rem;margin-top:14px;line-height:1.5}
 
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px;backdrop-filter:blur(6px)}
 .card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px}
 
 /* Carga */
@@ -43,8 +42,8 @@ textarea{width:100%;min-height:130px;background:var(--panel2);border:1px solid v
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 .hint{color:var(--muted);font-size:.8rem;margin-top:10px}
 .msg{margin-top:12px;font-size:.86rem;font-weight:600;display:none;padding:10px 14px;border-radius:9px}
-.msg.ok{display:block;background:rgba(52,211,153,.12);color:var(--venta)}
-.msg.err{display:block;background:rgba(248,113,113,.12);color:var(--ausente)}
+.msg.ok{display:block;background:rgba(52,211,153,.16);color:#6ee7b7}
+.msg.err{display:block;background:rgba(248,113,113,.16);color:#fca5a5}
 input[type=file]{display:none}
 
 /* Cargas registradas */
@@ -68,7 +67,7 @@ input[type=file]{display:none}
 .grate{font-size:1.5rem;font-weight:800;margin-top:10px}
 .grate small{color:var(--muted);font-size:.72rem;font-weight:500;display:block}
 .gstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;font-size:.8rem}
-.gstats span{display:flex;justify-content:space-between;background:var(--panel);border-radius:7px;padding:6px 9px}
+.gstats span{display:flex;justify-content:space-between;background:rgba(0,0,0,.28);border-radius:7px;padding:6px 9px}
 .gstats b{font-weight:700}
 .empty{color:var(--muted);font-size:.85rem;font-style:italic;margin-top:10px}
 
@@ -89,7 +88,6 @@ tr:last-child td{border-bottom:none}
 <div class="wrap">
 <div class="brandbar">
 <span class="logobox"><img src="https://previncasalud.com.ar/wp-content/uploads/2023/10/logo-previnca.svg" alt="Previnca Salud"></span>
-<h1>Reporte de Cobertura</h1>
 </div>
 <p class="sub">Cargá el CSV que exporta tu app, asignalo a un grupo y al barrio recorrido, y obtené las métricas por grupo y por barrio.</p>
 
