@@ -18,7 +18,14 @@ body{background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-ap
 h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em}
 .sub{color:var(--muted);font-size:.92rem;margin-top:6px;line-height:1.5}
 
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px}
+/* Layout de dos columnas: contenido + panel de contactos */
+.layout{display:grid;grid-template-columns:1fr;gap:22px;margin-top:22px}
+@media(min-width:980px){.layout{grid-template-columns:minmax(0,1fr) 340px;align-items:start}
+  .contacts-col{position:sticky;top:20px}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.main-col .card{margin-top:22px}
+.main-col .card:first-child{margin-top:0}
 .card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px}
 
 /* Carga */
@@ -36,6 +43,7 @@ select,input[type=text]{background:var(--panel2);border:1px solid var(--line);co
 textarea{width:100%;min-height:130px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:12px;font-family:ui-monospace,monospace;font-size:.82rem;margin-top:14px;display:none}
 .btn{background:var(--accent);color:#04121f;border:none;padding:11px 20px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.sm{padding:8px 14px;font-size:.82rem}
 .hint{color:var(--muted);font-size:.8rem;margin-top:10px}
 .msg{margin-top:12px;font-size:.86rem;font-weight:600;display:none;padding:10px 14px;border-radius:9px}
 .msg.ok{display:block;background:rgba(52,211,153,.12);color:var(--venta)}
@@ -78,12 +86,37 @@ tr:last-child td{border-bottom:none}
 .st-obra{color:var(--obra);font-weight:700}
 .tablewrap{overflow-x:auto}
 #dashboard{display:none}
+
+/* ---- Panel de contactos (derecha) ---- */
+.contacts-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+.contacts-card .head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.contacts-card h2{font-size:1.02rem;font-weight:800;margin:0}
+.contacts-card .count{color:var(--muted);font-size:.76rem;font-weight:600}
+.contacts-sub{color:var(--muted);font-size:.76rem;margin-top:6px;line-height:1.4}
+.cgroup{margin-top:16px}
+.cgroup-title{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:800;padding-bottom:6px;border-bottom:2px solid var(--gc,var(--accent))}
+.cgroup-title .badge{margin-left:auto;background:var(--panel2);color:var(--muted);border-radius:999px;padding:1px 9px;font-size:.72rem;font-weight:700}
+.contact{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--line)}
+.contact:last-child{border-bottom:none}
+.contact .who{display:flex;flex-direction:column;gap:1px;min-width:0}
+.contact .nm{font-weight:700;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contact .ad{color:var(--muted);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.contact .tel{font-family:ui-monospace,monospace;font-size:.82rem;color:var(--accent);white-space:nowrap}
+.contact .acts{display:flex;gap:6px}
+.iconbtn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:5px 8px;font-size:.72rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.iconbtn.wa{color:var(--venta);border-color:rgba(52,211,153,.4)}
+.contacts-empty{color:var(--muted);font-size:.85rem;font-style:italic;margin-top:14px}
+.contacts-actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <div class="wrap">
 <h1>Reporte de Cobertura</h1>
 <p class="sub">Cargá el CSV que exporta tu app, asignalo a un grupo y al barrio recorrido, y obtené las métricas por grupo y por barrio.</p>
+
+<div class="layout">
+<!-- ================= COLUMNA PRINCIPAL ================= -->
+<div class="main-col">
 
 <!-- CARGA -->
 <div class="card">
@@ -116,7 +149,7 @@ tr:last-child td{border-bottom:none}
 
 <textarea id="pasteArea" placeholder="Pegá acá el contenido del CSV…"></textarea>
 <input type="file" id="fileInput" accept=".csv,.txt">
-<p class="hint">Detecta separador , o ; y reconoce estados como Ausente, Dato, Venta y Obra Social automáticamente desde la columna Description.</p>
+<p class="hint">Detecta separador , o ; y reconoce estados como Ausente, Dato, Venta y Obra Social automáticamente desde la columna Description. Toda fila con <b>nombre + teléfono de 10 u 11 dígitos</b> se recopila en el panel de la derecha, dividida por grupo.</p>
 <div class="msg" id="msg"></div>
 
 <div class="loads" id="loadsList"></div>
@@ -147,12 +180,34 @@ tr:last-child td{border-bottom:none}
 </div>
 </div>
 </div>
+
+</div><!-- /main-col -->
+
+<!-- ================= COLUMNA DE CONTACTOS ================= -->
+<div class="contacts-col">
+<div class="contacts-card">
+<div class="head">
+<h2>Base de contactos</h2>
+<span class="count" id="contactsCount">0 datos</span>
+</div>
+<p class="contacts-sub">Contactos con nombre y teléfono (10 u 11 dígitos), divididos por grupo.</p>
+<div id="contactsBody">
+<p class="contacts-empty">Todavía no hay datos cargados.</p>
+</div>
+<div class="contacts-actions" id="contactsActions" style="display:none">
+<button class="btn sm" id="btnCsvContacts">Descargar CSV</button>
+<button class="btn ghost sm" id="btnCopyContacts">Copiar todo</button>
+</div>
+</div>
+</div><!-- /contacts-col -->
+
+</div><!-- /layout -->
 </div>
 
 <script>
 const GROUPS=["Francolini","Mudry","Zarate","Ameli"];
 const GCOLORS={Francolini:"var(--g-francolini)",Mudry:"var(--g-mudry)",Zarate:"var(--g-zarate)",Ameli:"var(--g-ameli)"};
-let loads=[]; // {group, barrio, rows:[{status}], name}
+let loads=[]; // {group, barrio, rows:[{status, name, phone, address}], name}
 let mode="file";
 
 const $=id=>document.getElementById(id);
@@ -171,10 +226,10 @@ function showExample(){
 setMode("paste");
 $("pasteArea").value=
 'Folder name,Folder color,Latitude,Longitude,Title,Description,Color,Phone number,Timestamp,Pin icon code\n'+
-',71b300,-32.942652,-60.640077,av belgrano 901,VENTA,,,2026-08-06T13:35:49Z,-1\n'+
+',71b300,-32.942652,-60.640077,Eva Perón 4521,Dato Susana Aguirre,3f51b5,3415708586,2026-08-06T13:35:49Z,-1\n'+
 ',71b300,-32.943312,-60.640243,ENTRE RIOS 524,obra social,,,2026-08-06T14:28:33Z,-1\n'+
 ',71b300,-32.943021,-60.640248,entre rios 537,ausente,,,2026-08-06T13:35:13Z,-1\n'+
-',71b300,-32.942517,-60.639723,mitre 4521,DATO,,,2026-08-06T13:37:46Z,-1';
+',71b300,-32.942517,-60.639723,Sucre 4917,Dato María Elena,3f51b5,3415848586,2026-08-06T13:37:46Z,-1';
 }
 
 /* ---- carga ---- */
@@ -202,7 +257,17 @@ if(!rows.length) throw new Error("No se encontraron filas de datos.");
 const header=rows[0].map(h=>h.trim().toLowerCase());
 const di=header.indexOf("description");
 if(di===-1) throw new Error('El CSV no tiene la columna "Description". Verificá el export.');
-const data=rows.slice(1).filter(r=>r.length>di).map(r=>({status:normStatus(r[di])}));
+const ti=header.indexOf("title");
+const pi=header.indexOf("phone number");
+const data=rows.slice(1).filter(r=>r.length>di).map(r=>{
+  const status=normStatus(r[di]);
+  return {
+    status,
+    name:cleanName(r[di]),
+    phone:digits(pi>-1?r[pi]:""),
+    address:(ti>-1?(r[ti]||""):"").trim()
+  };
+});
 if(!data.length) throw new Error("El CSV no tiene registros debajo del encabezado.");
 loads.push({group:$("selGroup").value,barrio:$("inBarrio").value.trim(),rows:data,name});
 $("inBarrio").value=""; if(mode==="paste")$("pasteArea").value="";
@@ -248,6 +313,14 @@ if(s.includes("obra"))return"obra";
 if(s.includes("ausente"))return"ausente";
 return s?"otro":"otro";
 }
+/* nombre: saca la palabra de estado del inicio y limpia espacios/saltos */
+function cleanName(raw){
+let s=(raw||"").replace(/\r?\n/g," ").trim();
+s=s.replace(/^\s*(dato|venta|obra\s*social|ausente)\s*/i,"");
+return s.replace(/\s+/g," ").trim();
+}
+/* solo dígitos del teléfono */
+function digits(raw){return (raw||"").replace(/\D/g,"");}
 
 /* ---- métricas ---- */
 function stats(rows){
@@ -259,11 +332,31 @@ return t;
 }
 const pct=v=>v.toFixed(1).replace(".",",")+"%";
 
+/* ---- contactos: solo estado dato, con nombre y tel de 10/11 díg ---- */
+function validPhone(p){return p.length===10||p.length===11;}
+function getContacts(){
+// devuelve {grupo:[{name,phone,address}]}
+const out={};
+loads.forEach(l=>{
+l.rows.forEach(r=>{
+// captura cualquier fila con nombre + teléfono válido (10 u 11 dígitos),
+// sin exigir que la Description diga "Dato"
+if(r.status!=="ausente" && r.name && validPhone(r.phone)){
+(out[l.group]=out[l.group]||[]).push({name:r.name,phone:r.phone,address:r.address});
+}
+});
+});
+// ordenar cada grupo por nombre
+Object.values(out).forEach(arr=>arr.sort((a,b)=>a.name.localeCompare(b.name,'es')));
+return out;
+}
+
 /* ---- render ---- */
 function render(){
 renderLoads();
 const has=loads.length>0;
 $("dashboard").style.display=has?"block":"none";
+renderContacts();
 if(!has)return;
 
 // KPIs globales
@@ -295,7 +388,7 @@ return `<div class="gcard" style="--gc:${GCOLORS[g]}">
 </div>`;
 }).join("");
 
-// Tabla barrios (una fila por carga grupo+barrio, agrupando cargas repetidas del mismo grupo+barrio)
+// Tabla barrios
 const map=new Map();
 loads.forEach(l=>{
 const k=l.group+"||"+l.barrio;
@@ -312,6 +405,81 @@ return `<tr>
 <td class="st-obra">${s.obra}</td><td class="st-ausente">${s.ausente}</td>
 </tr>`;
 }).join("");
+}
+
+function esc(s){return (s||"").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function renderContacts(){
+const data=getContacts();
+const total=Object.values(data).reduce((a,arr)=>a+arr.length,0);
+$("contactsCount").textContent=total+(total===1?" dato":" datos");
+const body=$("contactsBody");
+const actions=$("contactsActions");
+if(total===0){
+body.innerHTML='<p class="contacts-empty">Todavía no hay datos con nombre y teléfono válido.</p>';
+actions.style.display="none";
+return;
+}
+actions.style.display="flex";
+// respetar el orden de GROUPS y luego cualquier otro grupo
+const orderedGroups=[...GROUPS.filter(g=>data[g]),...Object.keys(data).filter(g=>!GROUPS.includes(g))];
+body.innerHTML=orderedGroups.map(g=>{
+const arr=data[g];
+const color=GCOLORS[g]||"var(--accent)";
+const items=arr.map(c=>{
+  const wa=c.phone.length>=10?`https://wa.me/549${c.phone.replace(/^0/,'').slice(-10)}`:null;
+  return `<div class="contact">
+    <div class="who">
+      <span class="nm">${esc(c.name)}</span>
+      ${c.address?`<span class="ad">${esc(c.address)}</span>`:""}
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="tel">${esc(c.phone)}</span>
+      <div class="acts">
+        ${wa?`<a class="iconbtn wa" href="${wa}" target="_blank" title="WhatsApp">WA</a>`:""}
+      </div>
+    </div>
+  </div>`;
+}).join("");
+return `<div class="cgroup">
+  <div class="cgroup-title" style="--gc:${color};color:${color}">
+    ${g}<span class="badge">${arr.length}</span>
+  </div>
+  ${items}
+</div>`;
+}).join("");
+
+// acciones
+$("btnCsvContacts").onclick=()=>downloadContactsCSV(data);
+$("btnCopyContacts").onclick=()=>copyContacts(data);
+}
+
+function contactsRows(data){
+const rows=[["Grupo","Nombre","Telefono","Direccion"]];
+const ordered=[...GROUPS.filter(g=>data[g]),...Object.keys(data).filter(g=>!GROUPS.includes(g))];
+ordered.forEach(g=>data[g].forEach(c=>rows.push([g,c.name,c.phone,c.address||""])));
+return rows;
+}
+function downloadContactsCSV(data){
+const rows=contactsRows(data);
+const csv=rows.map(r=>r.map(f=>{
+  const s=String(f??"");
+  return /[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}).join(",")).join("\n");
+const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8;"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="contactos_datos.csv";
+a.click();
+URL.revokeObjectURL(a.href);
+}
+function copyContacts(data){
+const rows=contactsRows(data).slice(1);
+const txt=rows.map(r=>`${r[1]}\t${r[2]}\t${r[0]}`).join("\n");
+navigator.clipboard.writeText(txt).then(()=>{
+  const b=$("btnCopyContacts");const t=b.textContent;b.textContent="¡Copiado!";
+  setTimeout(()=>b.textContent=t,1500);
+});
 }
 
 function renderLoads(){
