@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Métricas de Ventas — Previnca Salud</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+:root{
+  --panel:rgba(17,26,46,.82); --panel2:rgba(22,33,58,.85); --line:rgba(255,255,255,.14);
+  --text:#eef2fb; --muted:#c3cbdd; --accent:#80bbb3; --accent-hover:#a1d0c9; --accent-soft:rgba(128,187,179,.16);
+  --venta:#34d399; --dato:#fbbf24; --ausente:#f87171; --obra:#c4b5fd; --otro:#94a3b8;
+  --bueno:#34d399; --aceptable:#fbbf24; --cambiar:#f87171; --neutral:#80bbb3;
+  --radius:14px;
+  --g-francolini:#4cc3ff; --g-mudry:#34d399; --g-zarate:#fbbf24; --g-ameli:#c4b5fd;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(135deg,#2f5b82 0%,#4a4a6e 38%,#7c4e5d 62%,#b23a42 100%) fixed;color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;min-height:100vh;padding:28px 18px 60px}
+.wrap{max-width:1200px;margin:0 auto}
+.brandbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logobox{background:#ffffff;border-radius:12px;padding:10px 16px;display:inline-flex;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.35)}
+.logobox img{height:38px;display:block}
+.nav{display:flex;gap:10px;flex-wrap:wrap}
+.nav a{color:var(--muted);text-decoration:none;font-size:.85rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line)}
+.nav a:hover{color:var(--text);border-color:var(--accent)}
+.sub{color:var(--muted);font-size:.92rem;margin-top:14px;line-height:1.5}
+
+.setup{background:rgba(248,113,113,.14);border:1px solid var(--ausente);border-radius:var(--radius);padding:18px 20px;margin-top:20px;font-size:.9rem;line-height:1.6}
+.setup code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:5px;font-family:ui-monospace,monospace}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:22px;backdrop-filter:blur(6px)}
+.card h2{font-size:1.05rem;font-weight:700;margin-bottom:14px}
+.card h2 small{color:var(--muted);font-weight:500;font-size:.78rem;display:block;margin-top:3px}
+
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+.tab{background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 18px;border-radius:10px;font-weight:600;font-size:.9rem;cursor:pointer}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#04283a}
+.view{display:none}
+.view.active{display:block}
+
+.loadrow{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.8rem;color:var(--muted);font-weight:600}
+select,input[type=text],input[type=date],input[type=number],input[type=week],input[type=month]{
+  background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:9px;font-size:.9rem;min-width:150px
+}
+textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px 12px;font-size:.9rem;font-family:inherit;min-height:60px;resize:vertical}
+.numgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:16px}
+.btn{background:var(--accent);color:#04283a;border:none;padding:11px 20px;border-radius:10px;font-weight:700;font-size:.9rem;cursor:pointer}
+.btn:hover{background:var(--accent-hover)}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.del{background:rgba(248,113,113,.16);color:var(--ausente);border:1px solid var(--ausente);padding:6px 12px;font-size:.8rem}
+.hint{color:var(--muted);font-size:.8rem;margin-top:10px}
+.msg{margin-top:14px;font-size:.86rem;font-weight:600;display:none;padding:10px 14px;border-radius:9px}
+.msg.ok{display:block;background:rgba(52,211,153,.16);color:#6ee7b7}
+.msg.err{display:block;background:rgba(248,113,113,.16);color:#fca5a5}
+
+.rec-card{border-radius:var(--radius);padding:22px 24px;margin-top:16px;font-weight:700;font-size:1.15rem;display:flex;align-items:center;gap:16px}
+.rec-card .ico{font-size:2rem}
+.rec-card small{display:block;font-weight:500;font-size:.8rem;margin-top:4px;opacity:.85}
+.rec-bueno{background:rgba(52,211,153,.16);color:#6ee7b7;border:1px solid var(--bueno)}
+.rec-aceptable{background:rgba(251,191,36,.16);color:#fde68a;border:1px solid var(--aceptable)}
+.rec-cambiar{background:rgba(248,113,113,.16);color:#fca5a5;border:1px solid var(--cambiar)}
+.rec-neutral{background:var(--accent-soft);color:var(--accent-hover);border:1px solid var(--accent)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:6px}
+.kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
+.kpi .v{font-size:1.6rem;font-weight:800}
+.kpi .l{color:var(--muted);font-size:.75rem;margin-top:4px}
+
+.loads{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.loaditem{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.85rem;gap:10px;flex-wrap:wrap}
+.gtag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;border:1px solid}
+.ttag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;background:rgba(255,255,255,.08)}
+
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px}
+th{color:var(--muted);text-align:left;font-weight:600;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:none}
+.st-venta{color:var(--venta);font-weight:700}
+.st-dato{color:var(--dato);font-weight:700}
+.st-ausente{color:var(--ausente);font-weight:700}
+.st-obra{color:var(--obra);font-weight:700}
+.tablewrap{overflow-x:auto}
+.empty{color:var(--muted);font-size:.85rem;font-style:italic;margin-top:10px}
+.chartbox{max-width:100%;margin-top:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{padding:8px 14px;border-radius:20px;border:2px solid var(--line);background:var(--panel2);color:var(--text);font-size:.82rem;cursor:pointer;user-select:none}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-hover);font-weight:700}
+</style>
+<base target="_blank">
+</head>
+<body>
+<div class="wrap">
+<div class="brandbar">
+  <span class="logobox"><img src="https://previncasalud.com.ar/wp-content/uploads/2023/10/logo-previnca.svg" alt="Previnca Salud"></span>
+  <nav class="nav">
+    <a href="index.html" target="_self">Reporte CSV</a>
+    <a href="app.html" target="_self">Registro en mapa</a>
+    <a href="reporte.html" target="_self">Reporte simple</a>
+  </nav>
+</div>
+<p class="sub">Cargá las métricas del turno mañana por grupo y barrio, recibí la recomendación de si conviene <b>seguir en el barrio</b> o <b>cambiar</b> para la tarde, y consultá los agregados semanales y mensuales guardados en Supabase.</p>
+
+<div id="setupBanner" class="setup" style="display:none">
+  ⚠️ <b>Falta configurar la conexión a Supabase.</b><br>
+  Abrí <code>metricas.html</code>, buscá el bloque <code>SUPABASE_CONFIG</code> al inicio del script y completá <code>url</code> y <code>anonKey</code> con los datos de tu proyecto (Supabase → Settings → API). También ejecutá <code>supabase/schema.sql</code> en el SQL Editor de tu proyecto antes de usar la app.
+</div>
+
+<div id="appRoot" style="display:none">
+
+<div class="tabs">
+  <button class="tab active" data-view="carga">Carga del día</button>
+  <button class="tab" data-view="dashboard">Dashboard</button>
+  <button class="tab" data-view="semanal">Vista semanal</button>
+  <button class="tab" data-view="mensual">Vista mensual</button>
+  <button class="tab" data-view="comparativa">Comparativa de barrios</button>
+</div>
+
+<!-- A. PANEL DE CARGA -->
+<div class="view active" id="view-carga">
+  <div class="card">
+    <h2>Registrar métricas<small>Cargá el turno mañana para recibir la recomendación, o el turno tarde para cerrar el día.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="cGrupo">Grupo</label><select id="cGrupo"></select></div>
+      <div class="field"><label for="cBarrio">Barrio</label><select id="cBarrio"></select></div>
+      <div class="field"><label for="cFecha">Fecha</label><input type="date" id="cFecha"></div>
+      <div class="field"><label for="cTurno">Turno</label>
+        <select id="cTurno"><option value="mañana">Mañana</option><option value="tarde">Tarde</option></select>
+      </div>
+    </div>
+    <div class="numgrid">
+      <div class="field"><label for="nVisitas">Visitas</label><input type="number" id="nVisitas" min="0" value="0"></div>
+      <div class="field"><label for="nAtendidos">Atendidos</label><input type="number" id="nAtendidos" min="0" value="0"></div>
+      <div class="field"><label for="nVentas">Ventas</label><input type="number" id="nVentas" min="0" value="0"></div>
+      <div class="field"><label for="nDatos">Datos</label><input type="number" id="nDatos" min="0" value="0"></div>
+      <div class="field"><label for="nObra">Obra social</label><input type="number" id="nObra" min="0" value="0"></div>
+      <div class="field"><label for="nAusentes">Ausentes</label><input type="number" id="nAusentes" min="0" value="0"></div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label for="cNotas">Notas (opcional)</label>
+      <textarea id="cNotas" placeholder="Ej: lluvia, feriado, mucha competencia…"></textarea>
+    </div>
+    <button class="btn" id="btnGuardar" style="margin-top:16px">Guardar métricas</button>
+    <div class="msg" id="cMsg"></div>
+    <div id="cRec"></div>
+  </div>
+
+  <div class="card">
+    <h2>Registros de hoy</h2>
+    <div class="loads" id="hoyList"></div>
+    <p class="empty" id="hoyEmpty" style="display:none">Todavía no cargaste métricas para la fecha seleccionada.</p>
+  </div>
+</div>
+
+<!-- B. DASHBOARD DEL DIA -->
+<div class="view" id="view-dashboard">
+  <div class="card">
+    <h2>Dashboard del día</h2>
+    <div class="loadrow">
+      <div class="field"><label for="dFecha">Fecha</label><input type="date" id="dFecha"></div>
+      <div class="field"><label for="dGrupo">Grupo</label><select id="dGrupo"></select></div>
+      <div class="field"><label for="dBarrio">Barrio</label><select id="dBarrio"></select></div>
+      <button class="btn ghost" id="btnDashRefrescar">Ver</button>
+    </div>
+    <div id="dashContent"></div>
+  </div>
+</div>
+
+<!-- C. VISTA SEMANAL -->
+<div class="view" id="view-semanal">
+  <div class="card">
+    <h2>Vista semanal</h2>
+    <div class="loadrow">
+      <div class="field"><label for="sSemana">Semana</label><input type="week" id="sSemana"></div>
+      <button class="btn ghost" id="btnSemanaVer">Ver semana</button>
+    </div>
+    <div class="tablewrap"><table id="semTable"><thead>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th>Días</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="semEmpty" style="display:none">No hay registros cargados para esa semana.</p>
+    <div class="chartbox"><canvas id="semChart" height="90"></canvas></div>
+  </div>
+</div>
+
+<!-- D. VISTA MENSUAL -->
+<div class="view" id="view-mensual">
+  <div class="card">
+    <h2>Vista mensual</h2>
+    <div class="loadrow">
+      <div class="field"><label for="mMes">Mes</label><input type="month" id="mMes"></div>
+      <button class="btn ghost" id="btnMesVer">Ver mes</button>
+    </div>
+    <div class="tablewrap"><table id="mesTable"><thead>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th>Días</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="mesEmpty" style="display:none">No hay registros cargados para ese mes.</p>
+  </div>
+  <div class="card">
+    <h2>Ranking de barrios por tasa de venta<small>Suma de todos los grupos en el mes seleccionado.</small></h2>
+    <div class="tablewrap"><table id="rankTable"><thead>
+      <tr><th>#</th><th>Barrio</th><th>Visitas</th><th class="st-venta">Ventas</th><th>Tasa venta</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="rankEmpty" style="display:none">No hay datos suficientes para armar el ranking.</p>
+  </div>
+</div>
+
+<!-- E. COMPARATIVA DE BARRIOS -->
+<div class="view" id="view-comparativa">
+  <div class="card">
+    <h2>Comparativa de barrios</h2>
+    <div class="loadrow">
+      <div class="field"><label for="pDesde">Desde</label><input type="date" id="pDesde"></div>
+      <div class="field"><label for="pHasta">Hasta</label><input type="date" id="pHasta"></div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>Barrios a comparar</label>
+      <div class="chips" id="pChips"></div>
+    </div>
+    <button class="btn ghost" id="btnCompararVer" style="margin-top:16px">Comparar</button>
+    <div class="chartbox"><canvas id="pChart" height="100"></canvas></div>
+    <p class="empty" id="pEmpty" style="display:none">Seleccioná al menos un barrio y un rango de fechas con datos cargados.</p>
+  </div>
+</div>
+
+</div><!-- /appRoot -->
+</div>
+
+<script>
+/* ============================================
+   CONFIGURACIÓN — completar con los datos de tu proyecto Supabase
+   (Settings → API en supabase.com)
+============================================ */
+const SUPABASE_CONFIG = {
+  url: "TU_PROJECT_URL_AQUI",      // ej: https://abcdefgh.supabase.co
+  anonKey: "TU_ANON_KEY_AQUI"
+};
+
+const $=id=>document.getElementById(id);
+const GCOLORS={Francolini:"#4cc3ff",Mudry:"#34d399",Zarate:"#fbbf24",Ameli:"#c4b5fd"};
+
+if(!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes("TU_PROJECT_URL") || !SUPABASE_CONFIG.anonKey || SUPABASE_CONFIG.anonKey.includes("TU_ANON_KEY")){
+  $("setupBanner").style.display="block";
+}else{
+  $("appRoot").style.display="block";
+  initApp();
+}
+
+function initApp(){
+const sb=window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+
+let GRUPOS=[], BARRIOS=[];
+const grupoById=id=>GRUPOS.find(g=>g.id===id);
+const barrioById=id=>BARRIOS.find(b=>b.id===id);
+const pct=v=>(v==null?0:v).toString().replace(".",",")+"%";
+const todayStr=()=>new Date().toISOString().slice(0,10);
+
+/* ---- tabs ---- */
+document.querySelectorAll(".tab").forEach(t=>{
+  t.onclick=()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(x=>x.classList.remove("active"));
+    t.classList.add("active");
+    $("view-"+t.dataset.view).classList.add("active");
+  };
+});
+
+/* ---- carga inicial de catálogos ---- */
+async function cargarCatalogos(){
+  const [{data:g,error:ge},{data:b,error:be}]=await Promise.all([
+    sb.from("grupos").select("*").order("nombre"),
+    sb.from("barrios").select("*").order("nombre")
+  ]);
+  if(ge||be){ showMsg("cMsg", "Error al conectar con Supabase: "+((ge||be).message), false); return; }
+  GRUPOS=g||[]; BARRIOS=b||[];
+  const gOpts=GRUPOS.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join("");
+  const bOpts=BARRIOS.map(x=>`<option value="${x.id}">${x.nombre}${x.zona?" — "+x.zona:""}</option>`).join("");
+  ["cGrupo","dGrupo"].forEach(id=>{$(id).innerHTML=(id==="dGrupo"?`<option value="">Todos</option>`:"")+gOpts;});
+  ["cBarrio","dBarrio"].forEach(id=>{$(id).innerHTML=(id==="dBarrio"?`<option value="">Todos</option>`:"")+bOpts;});
+  $("pChips").innerHTML=BARRIOS.map(b=>`<span class="chip" data-id="${b.id}">${b.nombre}</span>`).join("");
+  $("pChips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>c.classList.toggle("on"));
+}
+
+/* ---- recomendación (Paso 2 del negocio) ---- */
+function recomendar({visitas, tasa_contacto, ventas, datos}){
+  if(!visitas){
+    return {tipo:"neutral", texto:"Sin visitas cargadas todavía", detalle:"Cargá al menos una visita para calcular la recomendación."};
+  }
+  if(tasa_contacto>=50 && ventas>=2){
+    return {tipo:"bueno", texto:"Seguir en el barrio — buen rendimiento", detalle:`Tasa de contacto ${pct(tasa_contacto)} y ${ventas} venta(s).`};
+  }
+  if(tasa_contacto>=40 && ventas>=1){
+    return {tipo:"aceptable", texto:"Seguir — rendimiento aceptable, insistir", detalle:`Tasa de contacto ${pct(tasa_contacto)} y ${ventas} venta(s).`};
+  }
+  if(tasa_contacto<40){
+    return {tipo:"cambiar", texto:"Cambiar de barrio — bajo contacto", detalle:`Tasa de contacto ${pct(tasa_contacto)}, por debajo del 40%.`};
+  }
+  if(ventas===0 && datos>=3){
+    return {tipo:"aceptable", texto:"Seguir — hay interés, cerrar en tarde", detalle:`Sin ventas todavía pero ${datos} dato(s) para retomar.`};
+  }
+  if(ventas===0 && datos<3){
+    return {tipo:"cambiar", texto:"Cambiar de barrio — sin resultados", detalle:`Sin ventas ni datos de interés (${datos}).`};
+  }
+  return {tipo:"neutral", texto:"Evaluar manualmente", detalle:"Los números no encajan en ninguna regla estándar."};
+}
+function recIcon(tipo){return {bueno:"✅",aceptable:"🟡",cambiar:"🔁",neutral:"ℹ️"}[tipo]||"ℹ️";}
+function renderRecCard(target, m){
+  const rec=recomendar(m);
+  target.innerHTML=`<div class="rec-card rec-${rec.tipo}"><span class="ico">${recIcon(rec.tipo)}</span>
+    <div>${rec.texto}<small>${rec.detalle}</small></div></div>`;
+}
+function calcMetrics(r){
+  const tasa_contacto=r.visitas?Math.round((r.atendidos/r.visitas)*1000)/10:0;
+  const tasa_venta=r.visitas?Math.round((r.ventas/r.visitas)*1000)/10:0;
+  return {...r, tasa_contacto, tasa_venta};
+}
+
+function showMsg(id,t,ok){const m=$(id);m.textContent=t;m.className="msg "+(ok?"ok":"err");}
+
+/* ============================================
+   A. PANEL DE CARGA
+============================================ */
+$("cFecha").value=todayStr();
+
+$("btnGuardar").onclick=async ()=>{
+  const grupo_id=$("cGrupo").value, barrio_id=$("cBarrio").value;
+  if(!grupo_id||!barrio_id){showMsg("cMsg","Elegí grupo y barrio.",false);return;}
+  const row={
+    grupo_id, barrio_id,
+    fecha: $("cFecha").value || todayStr(),
+    turno: $("cTurno").value,
+    visitas: +$("nVisitas").value||0,
+    atendidos: +$("nAtendidos").value||0,
+    ventas: +$("nVentas").value||0,
+    datos: +$("nDatos").value||0,
+    obra_social: +$("nObra").value||0,
+    ausentes: +$("nAusentes").value||0,
+    notas: $("cNotas").value.trim()||null,
+    updated_at: new Date().toISOString()
+  };
+  const {data,error}=await sb.from("registros_diarios").insert(row).select().single();
+  if(error){showMsg("cMsg","Error al guardar: "+error.message,false);return;}
+  showMsg("cMsg","Métricas guardadas correctamente.",true);
+  renderRecCard($("cRec"), calcMetrics(data));
+  ["nVisitas","nAtendidos","nVentas","nDatos","nObra","nAusentes"].forEach(id=>$(id).value=0);
+  $("cNotas").value="";
+  cargarRegistrosDeHoy();
+};
+
+async function cargarRegistrosDeHoy(){
+  const fecha=$("cFecha").value||todayStr();
+  const {data,error}=await sb.from("registros_diarios").select("*").eq("fecha",fecha).order("created_at",{ascending:false});
+  if(error){return;}
+  const list=$("hoyList");
+  if(!data||!data.length){list.innerHTML="";$("hoyEmpty").style.display="block";return;}
+  $("hoyEmpty").style.display="none";
+  list.innerHTML=data.map(r=>{
+    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
+    const gcolor=g?.color||"#80bbb3";
+    return `<div class="loaditem">
+      <span><span class="gtag" style="color:${gcolor};border-color:${gcolor}">${g?g.nombre:"—"}</span>
+      <span class="ttag">${r.turno}</span>
+      &nbsp;<b>${b?b.nombre:"—"}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span></span>
+      <button class="btn del" data-id="${r.id}">Eliminar</button>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".del").forEach(b=>b.onclick=async ()=>{
+    await sb.from("registros_diarios").delete().eq("id",b.dataset.id);
+    cargarRegistrosDeHoy();
+  });
+}
+$("cFecha").addEventListener("change", cargarRegistrosDeHoy);
+
+/* ============================================
+   B. DASHBOARD DEL DÍA
+============================================ */
+$("dFecha").value=todayStr();
+$("btnDashRefrescar").onclick=cargarDashboard;
+
+async function cargarDashboard(){
+  const fecha=$("dFecha").value||todayStr();
+  const grupo_id=$("dGrupo").value, barrio_id=$("dBarrio").value;
+  let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno","mañana");
+  if(grupo_id) q=q.eq("grupo_id",grupo_id);
+  if(barrio_id) q=q.eq("barrio_id",barrio_id);
+  const {data,error}=await q;
+  const el=$("dashContent");
+  if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
+  if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno mañana para esos filtros.</p>`;return;}
+
+  const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0});
+  const m=calcMetrics(tot);
+
+  let comparacionHtml="";
+  if(barrio_id && grupo_id){
+    const {data:prev}=await sb.from("registros_diarios").select("*").eq("barrio_id",barrio_id).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
+    if(prev&&prev.length){
+      const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas},{visitas:0,atendidos:0,ventas:0}));
+      const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
+      const delta=(m.tasa_contacto-ptasa).toFixed(1).replace(".",",");
+      comparacionHtml=`<p class="hint">Comparado con los últimos ${prev.length} día(s) en este barrio/grupo: tasa de contacto promedio anterior ${pct(ptasa)} (${delta>=0?"+":""}${delta} pts hoy), ventas promedio ${(p.ventas/prev.length).toFixed(1)}.</p>`;
+    }
+  }
+
+  el.innerHTML=`
+    <div class="kpis">
+      <div class="kpi"><div class="v">${m.visitas}</div><div class="l">Visitas</div></div>
+      <div class="kpi"><div class="v">${m.atendidos}</div><div class="l">Atendidos</div></div>
+      <div class="kpi"><div class="v" style="color:var(--accent)">${pct(m.tasa_contacto)}</div><div class="l">Tasa de contacto</div></div>
+      <div class="kpi"><div class="v st-venta">${m.ventas}</div><div class="l">Ventas</div></div>
+      <div class="kpi"><div class="v">${pct(m.tasa_venta)}</div><div class="l">Tasa de venta</div></div>
+      <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
+      <div class="kpi"><div class="v st-obra">${m.obra_social}</div><div class="l">Obra social</div></div>
+      <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+    </div>
+    <div id="dashRec"></div>
+    ${comparacionHtml}`;
+  renderRecCard($("dashRec"), m);
+}
+cargarCatalogos().then(()=>{ cargarRegistrosDeHoy(); cargarDashboard(); });
+
+/* ============================================
+   C. VISTA SEMANAL
+============================================ */
+function isoWeekToMonday(isoWeek){
+  // isoWeek: "YYYY-Www"
+  const [y,w]=isoWeek.split("-W").map(Number);
+  const simple=new Date(Date.UTC(y,0,1+(w-1)*7));
+  const dow=simple.getUTCDay()||7;
+  simple.setUTCDate(simple.getUTCDate()+1-dow);
+  return simple;
+}
+function currentIsoWeek(){
+  const d=new Date();
+  const target=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const dayNr=(target.getUTCDay()+6)%7;
+  target.setUTCDate(target.getUTCDate()-dayNr+3);
+  const firstThursday=new Date(Date.UTC(target.getUTCFullYear(),0,4));
+  const weekNr=1+Math.round(((target-firstThursday)/86400000-3+((firstThursday.getUTCDay()+6)%7))/7);
+  return `${target.getUTCFullYear()}-W${String(weekNr).padStart(2,"0")}`;
+}
+$("sSemana").value=currentIsoWeek();
+$("btnSemanaVer").onclick=cargarSemana;
+let semChartInst=null;
+
+async function cargarSemana(){
+  const iso=$("sSemana").value; if(!iso)return;
+  const monday=isoWeekToMonday(iso);
+  const next=new Date(monday); next.setUTCDate(next.getUTCDate()+7);
+  const {data,error}=await sb.from("metricas_semanales").select("*").gte("semana",monday.toISOString()).lt("semana",next.toISOString());
+  const tbody=$("semTable").querySelector("tbody");
+  if(error||!data||!data.length){tbody.innerHTML="";$("semEmpty").style.display="block";if(semChartInst)semChartInst.destroy();return;}
+  $("semEmpty").style.display="none";
+  tbody.innerHTML=data.map(r=>{
+    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
+    return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
+    <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
+    <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
+  }).join("");
+
+  const byBarrio=new Map();
+  data.forEach(r=>{
+    const b=barrioById(r.barrio_id); const key=b?b.nombre:"—";
+    const cur=byBarrio.get(key)||{visitas:0,atendidos:0};
+    cur.visitas+=r.total_visitas; cur.atendidos+=r.total_atendidos;
+    byBarrio.set(key,cur);
+  });
+  const labels=[...byBarrio.keys()];
+  const values=labels.map(l=>{const v=byBarrio.get(l);return v.visitas?Math.round((v.atendidos/v.visitas)*1000)/10:0;});
+  if(semChartInst)semChartInst.destroy();
+  semChartInst=new Chart($("semChart"),{type:"bar",data:{labels,datasets:[{label:"Tasa de contacto (%)",data:values,backgroundColor:"#80bbb3"}]},
+    options:{scales:{y:{beginAtZero:true,max:100,ticks:{color:"#c3cbdd"}},x:{ticks:{color:"#c3cbdd"}}},plugins:{legend:{labels:{color:"#eef2fb"}}}}});
+}
+
+/* ============================================
+   D. VISTA MENSUAL
+============================================ */
+$("mMes").value=todayStr().slice(0,7);
+$("btnMesVer").onclick=cargarMes;
+
+async function cargarMes(){
+  const ym=$("mMes").value; if(!ym)return;
+  const [y,mo]=ym.split("-").map(Number);
+  const first=new Date(Date.UTC(y,mo-1,1));
+  const next=new Date(Date.UTC(y,mo,1));
+  const {data,error}=await sb.from("metricas_mensuales").select("*").gte("mes",first.toISOString()).lt("mes",next.toISOString());
+  const tbody=$("mesTable").querySelector("tbody");
+  const rankBody=$("rankTable").querySelector("tbody");
+  if(error||!data||!data.length){
+    tbody.innerHTML="";$("mesEmpty").style.display="block";
+    rankBody.innerHTML="";$("rankEmpty").style.display="block";
+    return;
+  }
+  $("mesEmpty").style.display="none";
+  tbody.innerHTML=data.map(r=>{
+    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
+    return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
+    <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
+    <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
+  }).join("");
+
+  const byBarrio=new Map();
+  data.forEach(r=>{
+    const b=barrioById(r.barrio_id); const key=b?b.nombre:"—";
+    const cur=byBarrio.get(key)||{visitas:0,ventas:0};
+    cur.visitas+=r.total_visitas; cur.ventas+=r.total_ventas;
+    byBarrio.set(key,cur);
+  });
+  const ranking=[...byBarrio.entries()].map(([nombre,v])=>({nombre,...v,tasa:v.visitas?Math.round((v.ventas/v.visitas)*1000)/10:0}))
+    .sort((a,b)=>b.tasa-a.tasa);
+  if(!ranking.length){rankBody.innerHTML="";$("rankEmpty").style.display="block";}
+  else{
+    $("rankEmpty").style.display="none";
+    rankBody.innerHTML=ranking.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.nombre}</b></td><td>${r.visitas}</td><td class="st-venta">${r.ventas}</td><td><b>${pct(r.tasa)}</b></td></tr>`).join("");
+  }
+}
+
+/* ============================================
+   E. COMPARATIVA DE BARRIOS
+============================================ */
+const hoy=todayStr();
+const hace30=new Date(); hace30.setDate(hace30.getDate()-30);
+$("pDesde").value=hace30.toISOString().slice(0,10);
+$("pHasta").value=hoy;
+$("btnCompararVer").onclick=cargarComparativa;
+let pChartInst=null;
+
+async function cargarComparativa(){
+  const ids=[...$("pChips").querySelectorAll(".chip.on")].map(c=>c.dataset.id);
+  const desde=$("pDesde").value, hasta=$("pHasta").value;
+  if(!ids.length||!desde||!hasta){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
+  const {data,error}=await sb.from("registros_diarios").select("*").in("barrio_id",ids).gte("fecha",desde).lte("fecha",hasta);
+  if(error||!data||!data.length){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
+  $("pEmpty").style.display="none";
+
+  const byBarrio=new Map();
+  data.forEach(r=>{
+    const cur=byBarrio.get(r.barrio_id)||{visitas:0,atendidos:0,ventas:0};
+    cur.visitas+=r.visitas; cur.atendidos+=r.atendidos; cur.ventas+=r.ventas;
+    byBarrio.set(r.barrio_id,cur);
+  });
+  const labels=ids.map(id=>barrioById(id)?.nombre||"—");
+  const tasaContacto=ids.map(id=>{const v=byBarrio.get(id);return v&&v.visitas?Math.round((v.atendidos/v.visitas)*1000)/10:0;});
+  const tasaVenta=ids.map(id=>{const v=byBarrio.get(id);return v&&v.visitas?Math.round((v.ventas/v.visitas)*1000)/10:0;});
+
+  if(pChartInst)pChartInst.destroy();
+  pChartInst=new Chart($("pChart"),{type:"bar",data:{labels,datasets:[
+    {label:"Tasa de contacto (%)",data:tasaContacto,backgroundColor:"#80bbb3"},
+    {label:"Tasa de venta (%)",data:tasaVenta,backgroundColor:"#34d399"}
+  ]},options:{scales:{y:{beginAtZero:true,ticks:{color:"#c3cbdd"}},x:{ticks:{color:"#c3cbdd"}}},plugins:{legend:{labels:{color:"#eef2fb"}}}}});
+}
+
+}
+</script>
+</body>
+</html>
