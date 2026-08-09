@@ -116,6 +116,7 @@ tr:last-child td{border-bottom:none}
   <button class="tab" data-view="semanal">Vista semanal</button>
   <button class="tab" data-view="mensual">Vista mensual</button>
   <button class="tab" data-view="comparativa">Comparativa de barrios</button>
+  <button class="tab" data-view="historial">Historial por barrio</button>
 </div>
 
 <!-- A. PANEL DE CARGA -->
@@ -221,6 +222,24 @@ tr:last-child td{border-bottom:none}
     <button class="btn ghost" id="btnCompararVer" style="margin-top:16px">Comparar</button>
     <div class="chartbox"><canvas id="pChart" height="100"></canvas></div>
     <p class="empty" id="pEmpty" style="display:none">Seleccioná al menos un barrio y un rango de fechas con datos cargados.</p>
+  </div>
+</div>
+
+
+<div class="view" id="view-historial">
+  <div class="card">
+    <h2>Historial por barrio</h2>
+    <p class="hint" style="opacity:.8;margin:4px 0 14px">Buscá un barrio por nombre y vas a ver todos los registros históricos (turno mañana y tarde de cada día) para analizar la evolución.</p>
+    <div class="loadrow">
+      <div class="field" style="flex:1">
+        <label for="hBarrioSearch">Barrio</label>
+        <input type="text" id="hBarrioSearch" list="hBarrioList" placeholder="Ej: Echesortu" autocomplete="off">
+        <datalist id="hBarrioList"></datalist>
+      </div>
+      <button class="btn ghost" id="btnHistorialVer" style="align-self:flex-end">Ver historial</button>
+    </div>
+    <p class="empty" id="histEmpty" style="display:none">Escribí el nombre de un barrio y tocá "Ver historial".</p>
+    <div id="histContent" style="margin-top:16px"></div>
   </div>
 </div>
 
@@ -525,6 +544,54 @@ const hoy=todayStr();
 const hace30=new Date(); hace30.setDate(hace30.getDate()-30);
 $("pDesde").value=hace30.toISOString().slice(0,10);
 $("pHasta").value=hoy;
+/* ===== Historial por barrio ===== */
+function fillBarrioDatalist(){
+  const dl = $("hBarrioList");
+  if(!dl || !window.BARRIOS && typeof BARRIOS==="undefined") return;
+  const arr = (typeof BARRIOS!=="undefined")?BARRIOS:[];
+  dl.innerHTML = arr.map(b => `<option value="${b.nombre}${b.zona? " — "+b.zona : ""}">`).join("");
+}
+async function cargarHistorialBarrio(){
+  const cont = $("histContent");
+  fillBarrioDatalist();
+  const empty = $("histEmpty");
+  const raw = ($("hBarrioSearch").value || "").trim().toLowerCase();
+  cont.innerHTML = "";
+  if(!raw){ empty.style.display="block"; empty.textContent='Escribí el nombre de un barrio y tocá "Ver historial".'; return; }
+  const norm = s => (s||"").toString().trim().toLowerCase();
+  const typedName = raw.split("—")[0].trim();
+  const arr = (typeof BARRIOS!=="undefined")?BARRIOS:[];
+  let barrio = arr.find(b => norm(b.nombre) === typedName);
+  if(!barrio) barrio = arr.find(b => norm(b.nombre).includes(typedName) && typedName.length>=2);
+  if(!barrio){ empty.style.display="block"; empty.textContent="No encontré un barrio con ese nombre. Probá con otro."; return; }
+  empty.style.display="none";
+  cont.innerHTML = `<p class="empty">Cargando…</p>`;
+  const { data, error } = await sb.from("registros_diarios").select("*").eq("barrio_id", barrio.id).order("fecha",{ascending:false});
+  if(error){ cont.innerHTML = `<p class="empty">Error al cargar: ${error.message}</p>`; return; }
+  if(!data || !data.length){ cont.innerHTML = `<p class="empty">Todavía no hay registros para ${barrio.nombre}.</p>`; return; }
+  const byDate = {};
+  for(const r of data){ (byDate[r.fecha] = byDate[r.fecha] || []).push(r); }
+  const fechas = Object.keys(byDate).sort((a,b)=> b.localeCompare(a));
+  const GARR = (typeof GRUPOS!=="undefined")?GRUPOS:[];
+  const gname = id => { const g=GARR.find(x=>x.id===id); return g? g.nombre : "—"; };
+  const esc = v => v==null? "" : String(v).replace(/</g,"&lt;");
+  const cell = (r) => r ? `<td>${gname(r.grupo_id)}</td><td>${pct(r.visitas)}</td><td>${pct(r.atendidos)}</td><td>${pct(r.ventas)}</td><td>${pct(r.datos)}</td><td>${pct(r.obra_social)}</td><td>${pct(r.ausentes)}</td><td>${esc(r.notas)}</td>` : `<td colspan="8" style="opacity:.5">sin registro</td>`;
+  let html = `<h3 style="margin:6px 0 12px">${barrio.nombre}${barrio.zona? " — "+barrio.zona:""} <span style="opacity:.6;font-weight:400">(${data.length} registro/s)</span></h3>`;
+  html += `<div style="overflow-x:auto"><table class="tbl" style="width:100%;border-collapse:collapse;font-size:.9rem">`;
+  html += `<thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Fecha</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Turno</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Grupo</th><th style="padding:6px;border-bottom:1px solid var(--line)">Visitas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Atendidos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ventas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Datos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Obra soc.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ausentes</th><th style="padding:6px;border-bottom:1px solid var(--line)">Notas</th></tr></thead><tbody>`;
+  for(const f of fechas){
+    const regs = byDate[f];
+    const manana = regs.find(r => norm(r.turno)==="mañana");
+    const tarde = regs.find(r => norm(r.turno)==="tarde");
+    html += `<tr><td rowspan="2" style="font-weight:600;vertical-align:top;padding:6px;border-bottom:1px solid var(--line)">${f}</td><td style="padding:6px">Mañana</td>${cell(manana)}</tr>`;
+    html += `<tr><td style="padding:6px;border-bottom:1px solid var(--line)">Tarde</td>${cell(tarde)}</tr>`;
+  }
+  html += `</tbody></table></div>`;
+  cont.innerHTML = html;
+}
+$("btnHistorialVer").onclick = cargarHistorialBarrio;
+$("hBarrioSearch") && $("hBarrioSearch").addEventListener("keydown", e => { if(e.key==="Enter") cargarHistorialBarrio(); });
+$("hBarrioSearch") && $("hBarrioSearch").addEventListener("focus", fillBarrioDatalist);
 $("btnCompararVer").onclick=cargarComparativa;
 let pChartInst=null;
 
