@@ -268,7 +268,8 @@ const sb=window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonK
 let GRUPOS=[], BARRIOS_SUGERIDOS=[];
 const grupoById=id=>GRUPOS.find(g=>g.id===id);
 const pct=v=>(v==null?0:v).toString().replace(".",",")+"%";
-const todayStr=()=>new Date().toISOString().slice(0,10);
+const dateStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const todayStr=()=>dateStr(new Date());
 function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function fmtFecha(iso){if(!iso)return"—";const[y,mo,d]=iso.split("-");return d&&mo&&y?`${d}/${mo}/${y}`:iso;}
 
@@ -317,7 +318,7 @@ async function cargarBarriosSugeridos(){
   BARRIOS_SUGERIDOS=leerBarriosLocal();
   renderBarriosDatalist();
   renderChipsComparativa();
-  const {data,error}=await sb.from("registros_diarios").select("barrio");
+  const {data,error}=await sb.from("barrios_usados").select("barrio");
   if(error||!data) return;
   const map=new Map(BARRIOS_SUGERIDOS.map(b=>[b.toLowerCase(),b]));
   data.forEach(r=>{ if(r.barrio && !map.has(r.barrio.toLowerCase())) map.set(r.barrio.toLowerCase(), r.barrio); });
@@ -442,10 +443,11 @@ async function cargarDashboard(){
   if(barrio && grupo_id){
     const {data:prev}=await sb.from("registros_diarios").select("*").ilike("barrio",barrio).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
     if(prev&&prev.length){
-      const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas},{visitas:0,atendidos:0,ventas:0}));
+      const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas}),{visitas:0,atendidos:0,ventas:0});
       const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
-      const delta=(m.tasa_contacto-ptasa).toFixed(1).replace(".",",");
-      comparacionHtml=`<p class="hint">Comparado con los últimos ${prev.length} día(s) en este barrio/grupo: tasa de contacto promedio anterior ${pct(ptasa)} (${delta>=0?"+":""}${delta} pts hoy), ventas promedio ${(p.ventas/prev.length).toFixed(1)}.</p>`;
+      const delta=m.tasa_contacto-ptasa;
+      const deltaTxt=(delta>=0?"+":"")+delta.toFixed(1).replace(".",",");
+      comparacionHtml=`<p class="hint">Comparado con los últimos ${prev.length} día(s) en este barrio/grupo: tasa de contacto promedio anterior ${pct(ptasa)} (${deltaTxt} pts hoy), ventas promedio ${(p.ventas/prev.length).toFixed(1)}.</p>`;
     }
   }
 
@@ -569,7 +571,7 @@ async function cargarMes(){
 ============================================ */
 const hoy=todayStr();
 const hace30=new Date(); hace30.setDate(hace30.getDate()-30);
-$("pDesde").value=hace30.toISOString().slice(0,10);
+$("pDesde").value=dateStr(hace30);
 $("pHasta").value=hoy;
 $("btnCompararVer").onclick=cargarComparativa;
 let pChartInst=null;

@@ -98,6 +98,11 @@ SELECT
 FROM registros_diarios
 GROUP BY date_trunc('month', fecha), grupo_id, barrio;
 
+-- Barrios ya usados, para alimentar el autocomplete sin traer todos los
+-- registros (una fila por barrio en vez de una por visita).
+CREATE OR REPLACE VIEW barrios_usados AS
+SELECT DISTINCT barrio FROM registros_diarios ORDER BY barrio;
+
 -- ============================================
 -- DATOS INICIALES
 -- ============================================
