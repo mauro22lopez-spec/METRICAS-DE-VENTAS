@@ -1,7 +1,12 @@
 -- ============================================
 -- Métricas de Ventas Domiciliarias — Previnca Salud
 -- Script de creación de base de datos en Supabase
--- Ejecutar completo en el SQL Editor de Supabase
+-- Ejecutar completo en el SQL Editor de Supabase (proyecto nuevo)
+--
+-- Si tu proyecto ya tiene una versión anterior de este schema
+-- (con una tabla `barrios` y `registros_diarios.barrio_id`),
+-- NO corras este script: usá supabase/migration_barrio_libre.sql
+-- para migrar sin perder los datos ya cargados.
 -- ============================================
 
 -- ============================================
@@ -15,18 +20,10 @@ CREATE TABLE grupos (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE barrios (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nombre TEXT NOT NULL,
-  zona TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(nombre, zona)
-);
-
 CREATE TABLE registros_diarios (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   grupo_id UUID REFERENCES grupos(id) ON DELETE CASCADE,
-  barrio_id UUID REFERENCES barrios(id) ON DELETE CASCADE,
+  barrio TEXT NOT NULL,
   fecha DATE NOT NULL,
   turno TEXT CHECK (turno IN ('mañana', 'tarde')) DEFAULT 'mañana',
   visitas INTEGER DEFAULT 0,
@@ -44,8 +41,12 @@ CREATE TABLE registros_diarios (
 -- Índices para performance
 CREATE INDEX idx_registros_fecha ON registros_diarios(fecha);
 CREATE INDEX idx_registros_grupo ON registros_diarios(grupo_id);
-CREATE INDEX idx_registros_barrio ON registros_diarios(barrio_id);
+CREATE INDEX idx_registros_barrio ON registros_diarios(barrio);
 CREATE INDEX idx_registros_fecha_grupo ON registros_diarios(fecha, grupo_id);
+
+-- Necesaria para el índice de búsqueda parcial de abajo (ilike '%texto%' en el historial por barrio)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_registros_barrio_trgm ON registros_diarios USING gin (barrio gin_trgm_ops);
 
 -- ============================================
 -- VISTAS AGREGADAS
@@ -55,7 +56,7 @@ CREATE OR REPLACE VIEW metricas_semanales AS
 SELECT
   date_trunc('week', fecha) AS semana,
   grupo_id,
-  barrio_id,
+  barrio,
   SUM(visitas) AS total_visitas,
   SUM(atendidos) AS total_atendidos,
   SUM(ventas) AS total_ventas,
@@ -72,13 +73,13 @@ SELECT
   END AS tasa_venta,
   COUNT(DISTINCT fecha) AS dias_trabajados
 FROM registros_diarios
-GROUP BY date_trunc('week', fecha), grupo_id, barrio_id;
+GROUP BY date_trunc('week', fecha), grupo_id, barrio;
 
 CREATE OR REPLACE VIEW metricas_mensuales AS
 SELECT
   date_trunc('month', fecha) AS mes,
   grupo_id,
-  barrio_id,
+  barrio,
   SUM(visitas) AS total_visitas,
   SUM(atendidos) AS total_atendidos,
   SUM(ventas) AS total_ventas,
@@ -95,7 +96,7 @@ SELECT
   END AS tasa_venta,
   COUNT(DISTINCT fecha) AS dias_trabajados
 FROM registros_diarios
-GROUP BY date_trunc('month', fecha), grupo_id, barrio_id;
+GROUP BY date_trunc('month', fecha), grupo_id, barrio;
 
 -- ============================================
 -- DATOS INICIALES
@@ -107,22 +108,15 @@ INSERT INTO grupos (nombre, color) VALUES
   ('Zarate', '#fbbf24'),
   ('Ameli', '#c4b5fd');
 
-INSERT INTO barrios (nombre, zona) VALUES
-  ('Centro', 'Rosario'),
-  ('Echesortu', 'Rosario'),
-  ('Microcentro', 'Rosario'),
-  ('Baigorria', 'Gran Rosario'),
-  ('Roldán', 'Gran Rosario'),
-  ('Funes', 'Gran Rosario');
+-- Los barrios ya no se precargan: se escriben libremente al cargar
+-- métricas y la app va sugiriendo, vía autocomplete, los que ya se usaron.
 
 -- ============================================
 -- RLS (Row Level Security)
 -- ============================================
 
 ALTER TABLE grupos ENABLE ROW LEVEL SECURITY;
-ALTER TABLE barrios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registros_diarios ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow all" ON grupos FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all" ON barrios FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON registros_diarios FOR ALL USING (true) WITH CHECK (true);

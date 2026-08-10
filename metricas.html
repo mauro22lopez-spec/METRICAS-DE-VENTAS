@@ -116,7 +116,10 @@ tr:last-child td{border-bottom:none}
   <button class="tab" data-view="semanal">Vista semanal</button>
   <button class="tab" data-view="mensual">Vista mensual</button>
   <button class="tab" data-view="comparativa">Comparativa de barrios</button>
+  <button class="tab" data-view="historial">Historial por barrio</button>
 </div>
+
+<datalist id="barriosDatalist"></datalist>
 
 <!-- A. PANEL DE CARGA -->
 <div class="view active" id="view-carga">
@@ -124,7 +127,7 @@ tr:last-child td{border-bottom:none}
     <h2>Registrar métricas<small>Cargá el turno mañana para recibir la recomendación, o el turno tarde para cerrar el día.</small></h2>
     <div class="loadrow">
       <div class="field"><label for="cGrupo">Grupo</label><select id="cGrupo"></select></div>
-      <div class="field"><label for="cBarrio">Barrio</label><select id="cBarrio"></select></div>
+      <div class="field"><label for="cBarrio">Barrio</label><input type="text" id="cBarrio" list="barriosDatalist" autocomplete="off" placeholder="Escribí el barrio…"></div>
       <div class="field"><label for="cFecha">Fecha</label><input type="date" id="cFecha"></div>
       <div class="field"><label for="cTurno">Turno</label>
         <select id="cTurno"><option value="mañana">Mañana</option><option value="tarde">Tarde</option></select>
@@ -161,7 +164,7 @@ tr:last-child td{border-bottom:none}
     <div class="loadrow">
       <div class="field"><label for="dFecha">Fecha</label><input type="date" id="dFecha"></div>
       <div class="field"><label for="dGrupo">Grupo</label><select id="dGrupo"></select></div>
-      <div class="field"><label for="dBarrio">Barrio</label><select id="dBarrio"></select></div>
+      <div class="field"><label for="dBarrio">Barrio</label><input type="text" id="dBarrio" list="barriosDatalist" autocomplete="off" placeholder="Todos"></div>
       <button class="btn ghost" id="btnDashRefrescar">Ver</button>
     </div>
     <div id="dashContent"></div>
@@ -224,6 +227,18 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- F. HISTORIAL POR BARRIO -->
+<div class="view" id="view-historial">
+  <div class="card">
+    <h2>Historial por barrio<small>Buscá un barrio (aunque sea parcial, ej: "eche") para ver todo lo cargado ahí hasta ahora.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="hBarrio">Barrio</label><input type="text" id="hBarrio" list="barriosDatalist" autocomplete="off" placeholder="Ej: Echesortu…"></div>
+      <button class="btn ghost" id="btnHistorialVer">Buscar</button>
+    </div>
+    <div id="historialContent"><p class="empty">Escribí el nombre de un barrio y tocá Buscar.</p></div>
+  </div>
+</div>
+
 </div><!-- /appRoot -->
 </div>
 
@@ -250,11 +265,12 @@ if(!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes("TU_PROJECT_URL") || !SU
 function initApp(){
 const sb=window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
-let GRUPOS=[], BARRIOS=[];
+let GRUPOS=[], BARRIOS_SUGERIDOS=[];
 const grupoById=id=>GRUPOS.find(g=>g.id===id);
-const barrioById=id=>BARRIOS.find(b=>b.id===id);
 const pct=v=>(v==null?0:v).toString().replace(".",",")+"%";
 const todayStr=()=>new Date().toISOString().slice(0,10);
+function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function fmtFecha(iso){if(!iso)return"—";const[y,mo,d]=iso.split("-");return d&&mo&&y?`${d}/${mo}/${y}`:iso;}
 
 /* ---- tabs ---- */
 document.querySelectorAll(".tab").forEach(t=>{
@@ -266,20 +282,49 @@ document.querySelectorAll(".tab").forEach(t=>{
   };
 });
 
-/* ---- carga inicial de catálogos ---- */
-async function cargarCatalogos(){
-  const [{data:g,error:ge},{data:b,error:be}]=await Promise.all([
-    sb.from("grupos").select("*").order("nombre"),
-    sb.from("barrios").select("*").order("nombre")
-  ]);
-  if(ge||be){ showMsg("cMsg", "Error al conectar con Supabase: "+((ge||be).message), false); return; }
-  GRUPOS=g||[]; BARRIOS=b||[];
-  const gOpts=GRUPOS.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join("");
-  const bOpts=BARRIOS.map(x=>`<option value="${x.id}">${x.nombre}${x.zona?" — "+x.zona:""}</option>`).join("");
-  ["cGrupo","dGrupo"].forEach(id=>{$(id).innerHTML=(id==="dGrupo"?`<option value="">Todos</option>`:"")+gOpts;});
-  ["cBarrio","dBarrio"].forEach(id=>{$(id).innerHTML=(id==="dBarrio"?`<option value="">Todos</option>`:"")+bOpts;});
-  $("pChips").innerHTML=BARRIOS.map(b=>`<span class="chip" data-id="${b.id}">${b.nombre}</span>`).join("");
+/* ---- carga inicial de grupos ---- */
+async function cargarGrupos(){
+  const {data:g,error:ge}=await sb.from("grupos").select("*").order("nombre");
+  if(ge){ showMsg("cMsg", "Error al conectar con Supabase: "+ge.message, false); return; }
+  GRUPOS=g||[];
+  const gOpts=GRUPOS.map(x=>`<option value="${x.id}">${esc(x.nombre)}</option>`).join("");
+  $("cGrupo").innerHTML=gOpts;
+  $("dGrupo").innerHTML=`<option value="">Todos</option>`+gOpts;
+}
+
+/* ---- barrio libre: sugerencias vía datalist (localStorage + Supabase) ---- */
+const BARRIOS_LS_KEY="previnca_barrios_cache";
+function leerBarriosLocal(){ try{ return JSON.parse(localStorage.getItem(BARRIOS_LS_KEY))||[]; }catch(e){ return []; } }
+function guardarBarriosLocal(arr){ try{ localStorage.setItem(BARRIOS_LS_KEY, JSON.stringify(arr)); }catch(e){} }
+function renderBarriosDatalist(){
+  $("barriosDatalist").innerHTML=BARRIOS_SUGERIDOS.map(b=>`<option value="${esc(b)}">`).join("");
+}
+function renderChipsComparativa(){
+  const activos=new Set([...$("pChips").querySelectorAll(".chip.on")].map(c=>c.dataset.nombre));
+  $("pChips").innerHTML=BARRIOS_SUGERIDOS.map(b=>`<span class="chip${activos.has(b)?" on":""}" data-nombre="${esc(b)}">${esc(b)}</span>`).join("");
   $("pChips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>c.classList.toggle("on"));
+}
+function agregarBarrioSugerido(nombre){
+  if(!nombre) return;
+  if(BARRIOS_SUGERIDOS.some(b=>b.toLowerCase()===nombre.toLowerCase())) return;
+  BARRIOS_SUGERIDOS.push(nombre);
+  BARRIOS_SUGERIDOS.sort((a,b)=>a.localeCompare(b,"es"));
+  guardarBarriosLocal(BARRIOS_SUGERIDOS);
+  renderBarriosDatalist();
+  renderChipsComparativa();
+}
+async function cargarBarriosSugeridos(){
+  BARRIOS_SUGERIDOS=leerBarriosLocal();
+  renderBarriosDatalist();
+  renderChipsComparativa();
+  const {data,error}=await sb.from("registros_diarios").select("barrio");
+  if(error||!data) return;
+  const map=new Map(BARRIOS_SUGERIDOS.map(b=>[b.toLowerCase(),b]));
+  data.forEach(r=>{ if(r.barrio && !map.has(r.barrio.toLowerCase())) map.set(r.barrio.toLowerCase(), r.barrio); });
+  BARRIOS_SUGERIDOS=[...map.values()].sort((a,b)=>a.localeCompare(b,"es"));
+  guardarBarriosLocal(BARRIOS_SUGERIDOS);
+  renderBarriosDatalist();
+  renderChipsComparativa();
 }
 
 /* ---- recomendación (Paso 2 del negocio) ---- */
@@ -324,10 +369,10 @@ function showMsg(id,t,ok){const m=$(id);m.textContent=t;m.className="msg "+(ok?"
 $("cFecha").value=todayStr();
 
 $("btnGuardar").onclick=async ()=>{
-  const grupo_id=$("cGrupo").value, barrio_id=$("cBarrio").value;
-  if(!grupo_id||!barrio_id){showMsg("cMsg","Elegí grupo y barrio.",false);return;}
+  const grupo_id=$("cGrupo").value, barrio=$("cBarrio").value.trim();
+  if(!grupo_id||!barrio){showMsg("cMsg","Elegí el grupo y escribí el barrio.",false);return;}
   const row={
-    grupo_id, barrio_id,
+    grupo_id, barrio,
     fecha: $("cFecha").value || todayStr(),
     turno: $("cTurno").value,
     visitas: +$("nVisitas").value||0,
@@ -343,6 +388,7 @@ $("btnGuardar").onclick=async ()=>{
   if(error){showMsg("cMsg","Error al guardar: "+error.message,false);return;}
   showMsg("cMsg","Métricas guardadas correctamente.",true);
   renderRecCard($("cRec"), calcMetrics(data));
+  agregarBarrioSugerido(barrio);
   ["nVisitas","nAtendidos","nVentas","nDatos","nObra","nAusentes"].forEach(id=>$(id).value=0);
   $("cNotas").value="";
   cargarRegistrosDeHoy();
@@ -356,12 +402,12 @@ async function cargarRegistrosDeHoy(){
   if(!data||!data.length){list.innerHTML="";$("hoyEmpty").style.display="block";return;}
   $("hoyEmpty").style.display="none";
   list.innerHTML=data.map(r=>{
-    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
+    const g=grupoById(r.grupo_id);
     const gcolor=g?.color||"#80bbb3";
     return `<div class="loaditem">
-      <span><span class="gtag" style="color:${gcolor};border-color:${gcolor}">${g?g.nombre:"—"}</span>
+      <span><span class="gtag" style="color:${gcolor};border-color:${gcolor}">${g?esc(g.nombre):"—"}</span>
       <span class="ttag">${r.turno}</span>
-      &nbsp;<b>${b?b.nombre:"—"}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span></span>
+      &nbsp;<b>${esc(r.barrio)}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span></span>
       <button class="btn del" data-id="${r.id}">Eliminar</button>
     </div>`;
   }).join("");
@@ -380,10 +426,10 @@ $("btnDashRefrescar").onclick=cargarDashboard;
 
 async function cargarDashboard(){
   const fecha=$("dFecha").value||todayStr();
-  const grupo_id=$("dGrupo").value, barrio_id=$("dBarrio").value;
+  const grupo_id=$("dGrupo").value, barrio=$("dBarrio").value.trim();
   let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno","mañana");
   if(grupo_id) q=q.eq("grupo_id",grupo_id);
-  if(barrio_id) q=q.eq("barrio_id",barrio_id);
+  if(barrio) q=q.ilike("barrio",barrio);
   const {data,error}=await q;
   const el=$("dashContent");
   if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
@@ -393,8 +439,8 @@ async function cargarDashboard(){
   const m=calcMetrics(tot);
 
   let comparacionHtml="";
-  if(barrio_id && grupo_id){
-    const {data:prev}=await sb.from("registros_diarios").select("*").eq("barrio_id",barrio_id).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
+  if(barrio && grupo_id){
+    const {data:prev}=await sb.from("registros_diarios").select("*").ilike("barrio",barrio).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
     if(prev&&prev.length){
       const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas},{visitas:0,atendidos:0,ventas:0}));
       const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
@@ -418,7 +464,7 @@ async function cargarDashboard(){
     ${comparacionHtml}`;
   renderRecCard($("dashRec"), m);
 }
-cargarCatalogos().then(()=>{ cargarRegistrosDeHoy(); cargarDashboard(); });
+Promise.all([cargarGrupos(), cargarBarriosSugeridos()]).then(()=>{ cargarRegistrosDeHoy(); cargarDashboard(); });
 
 /* ============================================
    C. VISTA SEMANAL
@@ -453,8 +499,8 @@ async function cargarSemana(){
   if(error||!data||!data.length){tbody.innerHTML="";$("semEmpty").style.display="block";if(semChartInst)semChartInst.destroy();return;}
   $("semEmpty").style.display="none";
   tbody.innerHTML=data.map(r=>{
-    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
-    return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
+    const g=grupoById(r.grupo_id);
+    return `<tr><td><b>${esc(r.barrio)||"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?esc(g.nombre):"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
     <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
@@ -462,7 +508,7 @@ async function cargarSemana(){
 
   const byBarrio=new Map();
   data.forEach(r=>{
-    const b=barrioById(r.barrio_id); const key=b?b.nombre:"—";
+    const key=r.barrio||"—";
     const cur=byBarrio.get(key)||{visitas:0,atendidos:0};
     cur.visitas+=r.total_visitas; cur.atendidos+=r.total_atendidos;
     byBarrio.set(key,cur);
@@ -495,8 +541,8 @@ async function cargarMes(){
   }
   $("mesEmpty").style.display="none";
   tbody.innerHTML=data.map(r=>{
-    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
-    return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
+    const g=grupoById(r.grupo_id);
+    return `<tr><td><b>${esc(r.barrio)||"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?esc(g.nombre):"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
     <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
@@ -504,7 +550,7 @@ async function cargarMes(){
 
   const byBarrio=new Map();
   data.forEach(r=>{
-    const b=barrioById(r.barrio_id); const key=b?b.nombre:"—";
+    const key=r.barrio||"—";
     const cur=byBarrio.get(key)||{visitas:0,ventas:0};
     cur.visitas+=r.total_visitas; cur.ventas+=r.total_ventas;
     byBarrio.set(key,cur);
@@ -514,7 +560,7 @@ async function cargarMes(){
   if(!ranking.length){rankBody.innerHTML="";$("rankEmpty").style.display="block";}
   else{
     $("rankEmpty").style.display="none";
-    rankBody.innerHTML=ranking.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.nombre}</b></td><td>${r.visitas}</td><td class="st-venta">${r.ventas}</td><td><b>${pct(r.tasa)}</b></td></tr>`).join("");
+    rankBody.innerHTML=ranking.map((r,i)=>`<tr><td>${i+1}</td><td><b>${esc(r.nombre)}</b></td><td>${r.visitas}</td><td class="st-venta">${r.ventas}</td><td><b>${pct(r.tasa)}</b></td></tr>`).join("");
   }
 }
 
@@ -529,28 +575,97 @@ $("btnCompararVer").onclick=cargarComparativa;
 let pChartInst=null;
 
 async function cargarComparativa(){
-  const ids=[...$("pChips").querySelectorAll(".chip.on")].map(c=>c.dataset.id);
+  const nombres=[...$("pChips").querySelectorAll(".chip.on")].map(c=>c.dataset.nombre);
   const desde=$("pDesde").value, hasta=$("pHasta").value;
-  if(!ids.length||!desde||!hasta){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
-  const {data,error}=await sb.from("registros_diarios").select("*").in("barrio_id",ids).gte("fecha",desde).lte("fecha",hasta);
+  if(!nombres.length||!desde||!hasta){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
+  const {data,error}=await sb.from("registros_diarios").select("*").in("barrio",nombres).gte("fecha",desde).lte("fecha",hasta);
   if(error||!data||!data.length){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
   $("pEmpty").style.display="none";
 
   const byBarrio=new Map();
   data.forEach(r=>{
-    const cur=byBarrio.get(r.barrio_id)||{visitas:0,atendidos:0,ventas:0};
+    const cur=byBarrio.get(r.barrio)||{visitas:0,atendidos:0,ventas:0};
     cur.visitas+=r.visitas; cur.atendidos+=r.atendidos; cur.ventas+=r.ventas;
-    byBarrio.set(r.barrio_id,cur);
+    byBarrio.set(r.barrio,cur);
   });
-  const labels=ids.map(id=>barrioById(id)?.nombre||"—");
-  const tasaContacto=ids.map(id=>{const v=byBarrio.get(id);return v&&v.visitas?Math.round((v.atendidos/v.visitas)*1000)/10:0;});
-  const tasaVenta=ids.map(id=>{const v=byBarrio.get(id);return v&&v.visitas?Math.round((v.ventas/v.visitas)*1000)/10:0;});
+  const labels=nombres;
+  const tasaContacto=nombres.map(n=>{const v=byBarrio.get(n);return v&&v.visitas?Math.round((v.atendidos/v.visitas)*1000)/10:0;});
+  const tasaVenta=nombres.map(n=>{const v=byBarrio.get(n);return v&&v.visitas?Math.round((v.ventas/v.visitas)*1000)/10:0;});
 
   if(pChartInst)pChartInst.destroy();
   pChartInst=new Chart($("pChart"),{type:"bar",data:{labels,datasets:[
     {label:"Tasa de contacto (%)",data:tasaContacto,backgroundColor:"#80bbb3"},
     {label:"Tasa de venta (%)",data:tasaVenta,backgroundColor:"#34d399"}
   ]},options:{scales:{y:{beginAtZero:true,ticks:{color:"#c3cbdd"}},x:{ticks:{color:"#c3cbdd"}}},plugins:{legend:{labels:{color:"#eef2fb"}}}}});
+}
+
+/* ============================================
+   F. HISTORIAL POR BARRIO
+============================================ */
+$("btnHistorialVer").onclick=cargarHistorial;
+$("hBarrio").addEventListener("keydown", e=>{ if(e.key==="Enter") cargarHistorial(); });
+
+async function cargarHistorial(){
+  const busqueda=$("hBarrio").value.trim();
+  const el=$("historialContent");
+  if(!busqueda){ el.innerHTML=`<p class="empty">Escribí el nombre de un barrio y tocá Buscar.</p>`; return; }
+
+  const {data,error}=await sb.from("registros_diarios").select("*").ilike("barrio",`%${busqueda}%`).order("fecha",{ascending:false}).order("created_at",{ascending:false});
+  if(error){ el.innerHTML=`<p class="empty">Error: ${error.message}</p>`; return; }
+  if(!data||!data.length){ el.innerHTML=`<p class="empty">No hay registros para este barrio todavía.</p>`; return; }
+
+  const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,ausentes:0});
+  const m=calcMetrics(tot);
+
+  const manana=data.filter(r=>r.turno==="mañana");
+  const tarde=data.filter(r=>r.turno==="tarde");
+  const tasaProm=arr=>{ const v=arr.reduce((a,r)=>a+r.visitas,0), at=arr.reduce((a,r)=>a+r.atendidos,0); return v?Math.round((at/v)*1000)/10:0; };
+  const ventasProm=arr=>arr.length?arr.reduce((a,r)=>a+r.ventas,0)/arr.length:0;
+  const mTasa=tasaProm(manana), tTasa=tasaProm(tarde);
+  const mVentasProm=ventasProm(manana), tVentasProm=ventasProm(tarde);
+
+  let recTexto;
+  if(manana.length && tarde.length){
+    recTexto = (mTasa>tTasa || (mTasa===tTasa && mVentasProm>=tVentasProm))
+      ? `En promedio, este barrio rinde mejor por la <b>mañana</b> — tasa de contacto ${pct(mTasa)} vs ${pct(tTasa)} de la tarde.`
+      : `En promedio, este barrio rinde mejor por la <b>tarde</b> — tasa de contacto ${pct(tTasa)} vs ${pct(mTasa)} de la mañana.`;
+  }else if(manana.length && !tarde.length){
+    recTexto="Todavía no hay registros de turno tarde en este barrio para comparar.";
+  }else if(!manana.length && tarde.length){
+    recTexto="Todavía no hay registros de turno mañana en este barrio para comparar.";
+  }else{
+    recTexto="No hay datos suficientes para comparar turnos.";
+  }
+
+  const filas=data.map(r=>{
+    const g=grupoById(r.grupo_id);
+    const rm=calcMetrics(r);
+    return `<tr><td>${fmtFecha(r.fecha)}</td><td><span class="ttag">${r.turno}</span></td>
+      <td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?esc(g.nombre):"—"}</span></td>
+      <td><b>${esc(r.barrio)}</b></td>
+      <td>${r.visitas}</td><td>${r.atendidos}</td><td>${pct(rm.tasa_contacto)}</td>
+      <td class="st-venta">${r.ventas}</td><td class="st-dato">${r.datos}</td><td class="st-ausente">${r.ausentes}</td>
+      <td>${esc(r.notas||"—")}</td></tr>`;
+  }).join("");
+
+  el.innerHTML=`
+    <div class="kpis">
+      <div class="kpi"><div class="v">${m.visitas}</div><div class="l">Visitas totales</div></div>
+      <div class="kpi"><div class="v" style="color:var(--accent)">${pct(m.tasa_contacto)}</div><div class="l">Tasa de contacto</div></div>
+      <div class="kpi"><div class="v st-venta">${m.ventas}</div><div class="l">Ventas</div></div>
+      <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
+      <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+    </div>
+    <div class="rec-card rec-neutral" style="margin-top:16px"><span class="ico">🕑</span><div>${recTexto}</div></div>
+    <div class="kpis" style="margin-top:16px">
+      <div class="kpi"><div class="v">${pct(mTasa)}</div><div class="l">Tasa contacto — mañana</div><div class="l">${manana.length} registro(s)</div></div>
+      <div class="kpi"><div class="v">${pct(tTasa)}</div><div class="l">Tasa contacto — tarde</div><div class="l">${tarde.length} registro(s)</div></div>
+      <div class="kpi"><div class="v st-venta">${mVentasProm.toFixed(1)}</div><div class="l">Ventas prom. — mañana</div></div>
+      <div class="kpi"><div class="v st-venta">${tVentasProm.toFixed(1)}</div><div class="l">Ventas prom. — tarde</div></div>
+    </div>
+    <div class="tablewrap" style="margin-top:18px"><table><thead>
+      <tr><th>Fecha</th><th>Turno</th><th>Grupo</th><th>Barrio</th><th>Visitas</th><th>Atendidos</th><th>Tasa</th><th class="st-venta">Ventas</th><th class="st-dato">Datos</th><th class="st-ausente">Ausentes</th><th>Notas</th></tr>
+    </thead><tbody>${filas}</tbody></table></div>`;
 }
 
 }
