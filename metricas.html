@@ -11,6 +11,7 @@
   --panel:rgba(17,26,46,.82); --panel2:rgba(22,33,58,.85); --line:rgba(255,255,255,.14);
   --text:#eef2fb; --muted:#c3cbdd; --accent:#80bbb3; --accent-hover:#a1d0c9; --accent-soft:rgba(128,187,179,.16);
   --venta:#34d399; --dato:#fbbf24; --ausente:#f87171; --obra:#c4b5fd; --otro:#94a3b8;
+  --sa:#5e81c9;
   --bueno:#34d399; --aceptable:#fbbf24; --cambiar:#f87171; --neutral:#80bbb3;
   --radius:14px;
   --g-francolini:#4cc3ff; --g-mudry:#34d399; --g-zarate:#fbbf24; --g-ameli:#c4b5fd;
@@ -56,6 +57,16 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:
 .msg.ok{display:block;background:rgba(52,211,153,.16);color:#6ee7b7}
 .msg.err{display:block;background:rgba(248,113,113,.16);color:#fca5a5}
 
+/* Sección plegable de servicio asistencial */
+.plegable{margin-top:18px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.plegable>summary{cursor:pointer;padding:12px 16px;background:var(--panel2);font-weight:700;font-size:.9rem;list-style:none;display:flex;align-items:center;gap:10px;user-select:none}
+.plegable>summary::-webkit-details-marker{display:none}
+.plegable>summary .chev{transition:transform .2s;color:var(--sa)}
+.plegable[open]>summary .chev{transform:rotate(90deg)}
+.plegable>summary .badge{margin-left:auto;font-weight:600;font-size:.75rem;color:var(--muted)}
+.plegable .inner{padding:16px}
+.st-sa{color:var(--sa);font-weight:700}
+
 .rec-card{border-radius:var(--radius);padding:22px 24px;margin-top:16px;font-weight:700;font-size:1.15rem;display:flex;align-items:center;gap:16px}
 .rec-card .ico{font-size:2rem}
 .rec-card small{display:block;font-weight:500;font-size:.8rem;margin-top:4px;opacity:.85}
@@ -68,6 +79,11 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:
 .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
 .kpi .v{font-size:1.6rem;font-weight:800}
 .kpi .l{color:var(--muted);font-size:.75rem;margin-top:4px}
+
+.sagrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:14px}
+.sacell{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+.sacell .v{font-size:1.2rem;font-weight:800;color:var(--sa)}
+.sacell .l{color:var(--muted);font-size:.72rem;margin-top:3px;text-transform:capitalize}
 
 .loads{display:flex;flex-direction:column;gap:8px;margin-top:14px}
 .loaditem{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.85rem;gap:10px;flex-wrap:wrap}
@@ -139,6 +155,20 @@ tr:last-child td{border-bottom:none}
       <div class="field"><label for="nObra">Obra social</label><input type="number" id="nObra" min="0" value="0"></div>
       <div class="field"><label for="nAusentes">Ausentes</label><input type="number" id="nAusentes" min="0" value="0"></div>
     </div>
+
+    <!-- Sección plegable: servicio asistencial (competencias) -->
+    <details class="plegable" id="saPlegable">
+      <summary>
+        <span class="chev">▶</span>
+        Servicio asistencial (competencias)
+        <span class="badge" id="saBadge">Total: 0</span>
+      </summary>
+      <div class="inner">
+        <p class="hint" style="margin-top:0">Cuántas puertas ya tenían cobertura de cada competencia.</p>
+        <div class="numgrid" id="saInputs"><!-- se llena por JS --></div>
+      </div>
+    </details>
+
     <div class="field" style="margin-top:14px">
       <label for="cNotas">Notas (opcional)</label>
       <textarea id="cNotas" placeholder="Ej: lluvia, feriado, mucha competencia…"></textarea>
@@ -178,7 +208,7 @@ tr:last-child td{border-bottom:none}
       <button class="btn ghost" id="btnSemanaVer">Ver semana</button>
     </div>
     <div class="tablewrap"><table id="semTable"><thead>
-      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-obra">Serv. asistencial</th><th>Días</th></tr>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th><th>Días</th></tr>
     </thead><tbody></tbody></table></div>
     <p class="empty" id="semEmpty" style="display:none">No hay registros cargados para esa semana.</p>
     <div class="chartbox"><canvas id="semChart" height="90"></canvas></div>
@@ -194,7 +224,7 @@ tr:last-child td{border-bottom:none}
       <button class="btn ghost" id="btnMesVer">Ver mes</button>
     </div>
     <div class="tablewrap"><table id="mesTable"><thead>
-      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-obra">Serv. asistencial</th><th>Días</th></tr>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th><th>Días</th></tr>
     </thead><tbody></tbody></table></div>
     <p class="empty" id="mesEmpty" style="display:none">No hay registros cargados para ese mes.</p>
   </div>
@@ -225,7 +255,6 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
-
 <div class="view" id="view-historial">
   <div class="card">
     <h2>Historial por barrio</h2>
@@ -252,14 +281,32 @@ tr:last-child td{border-bottom:none}
    (Settings → API en supabase.com)
 ============================================ */
 const SUPABASE_CONFIG = {
-  url: "https://mxgkkeangcuqxlvrekqx.supabase.co",      // ej: https://abcdefgh.supabase.co
-  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2trZWFuZ2N1cXhsdnJla3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyOTE1MTAsImV4cCI6MjEwMDg2NzUxMH0.SLS9yrUfBvl4UoRTXi3QBVM8TXVhNlydR4l2Vg9i01s"
+  url: "https://mxgkkeangcuqxlvrekqx.supabase.co",
+  anonKey: "PEGA_TU_ANON_KEY_AQUI"
 };
+
+/* ============================================
+   COMPETENCIAS (servicio asistencial)
+   Para agregar o sacar una competencia, editá SOLO esta lista.
+   'col' = nombre exacto de la columna en registros_diarios.
+   'label' = cómo se muestra en la app.
+============================================ */
+const COMPETENCIAS = [
+  { col: "sa_ciba",            label: "Ciba" },
+  { col: "sa_copeto",          label: "Copeto" },
+  { col: "sa_bassi",           label: "Bassi" },
+  { col: "sa_oeste",           label: "Oeste" },
+  { col: "sa_pocho_bernardo",  label: "Pocho Bernardo" },
+  { col: "sa_cgyl",            label: "CGYL" },
+  { col: "sa_novara",          label: "Novara" },
+  { col: "sa_global",          label: "Global" },
+  { col: "sa_games",           label: "Games" }
+];
 
 const $=id=>document.getElementById(id);
 const GCOLORS={Francolini:"#4cc3ff",Mudry:"#34d399",Zarate:"#fbbf24",Ameli:"#c4b5fd"};
 
-if(!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes("TU_PROJECT_URL") || !SUPABASE_CONFIG.anonKey || SUPABASE_CONFIG.anonKey.includes("TU_ANON_KEY")){
+if(!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes("TU_PROJECT_URL") || !SUPABASE_CONFIG.anonKey || SUPABASE_CONFIG.anonKey.includes("TU_ANON_KEY") || SUPABASE_CONFIG.anonKey.includes("PEGA_TU_ANON_KEY")){
   $("setupBanner").style.display="block";
 }else{
   $("appRoot").style.display="block";
@@ -273,7 +320,10 @@ let GRUPOS=[], BARRIOS=[];
 const grupoById=id=>GRUPOS.find(g=>g.id===id);
 const barrioById=id=>BARRIOS.find(b=>b.id===id);
 const pct=v=>(v==null?0:v).toString().replace(".",",")+"%";
+const num=v=>(v==null?0:v).toString();
 const todayStr=()=>new Date().toISOString().slice(0,10);
+// Suma las competencias de un registro.
+const sumaSA=r=>COMPETENCIAS.reduce((a,c)=>a+(+r[c.col]||0),0);
 
 /* ---- tabs ---- */
 document.querySelectorAll(".tab").forEach(t=>{
@@ -284,6 +334,33 @@ document.querySelectorAll(".tab").forEach(t=>{
     $("view-"+t.dataset.view).classList.add("active");
   };
 });
+
+/* ---- construir los inputs de competencia en la carga ---- */
+function construirInputsSA(){
+  $("saInputs").innerHTML = COMPETENCIAS.map(c=>
+    `<div class="field"><label for="in_${c.col}">${c.label}</label>`+
+    `<input type="number" id="in_${c.col}" class="sa-input" min="0" value="0"></div>`
+  ).join("");
+  // Actualizar el badge del total al tipear.
+  document.querySelectorAll(".sa-input").forEach(inp=>{
+    inp.addEventListener("input", actualizarBadgeSA);
+  });
+}
+function actualizarBadgeSA(){
+  let t=0;
+  COMPETENCIAS.forEach(c=>{ t += (+$("in_"+c.col).value||0); });
+  $("saBadge").textContent = "Total: "+t;
+}
+function leerInputsSA(){
+  const o={};
+  COMPETENCIAS.forEach(c=>{ o[c.col] = +$("in_"+c.col).value||0; });
+  return o;
+}
+function limpiarInputsSA(){
+  COMPETENCIAS.forEach(c=>{ $("in_"+c.col).value = 0; });
+  actualizarBadgeSA();
+}
+construirInputsSA();
 
 /* ---- carga inicial de catálogos ---- */
 async function cargarCatalogos(){
@@ -355,6 +432,7 @@ $("btnGuardar").onclick=async ()=>{
     datos: +$("nDatos").value||0,
     obra_social: +$("nObra").value||0,
     ausentes: +$("nAusentes").value||0,
+    ...leerInputsSA(),
     notas: $("cNotas").value.trim()||null,
     updated_at: new Date().toISOString()
   };
@@ -363,6 +441,7 @@ $("btnGuardar").onclick=async ()=>{
   showMsg("cMsg","Métricas guardadas correctamente.",true);
   renderRecCard($("cRec"), calcMetrics(data));
   ["nVisitas","nAtendidos","nVentas","nDatos","nObra","nAusentes"].forEach(id=>$(id).value=0);
+  limpiarInputsSA();
   $("cNotas").value="";
   cargarRegistrosDeHoy();
 };
@@ -377,10 +456,11 @@ async function cargarRegistrosDeHoy(){
   list.innerHTML=data.map(r=>{
     const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
     const gcolor=g?.color||"#80bbb3";
+    const sa=sumaSA(r);
     return `<div class="loaditem">
       <span><span class="gtag" style="color:${gcolor};border-color:${gcolor}">${g?g.nombre:"—"}</span>
       <span class="ttag">${r.turno}</span>
-      &nbsp;<b>${b?b.nombre:"—"}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span></span>
+      &nbsp;<b>${b?b.nombre:"—"}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span> · <span class="st-sa">Serv. asist. ${sa}</span></span>
       <button class="btn del" data-id="${r.id}">Eliminar</button>
     </div>`;
   }).join("");
@@ -408,19 +488,33 @@ async function cargarDashboard(){
   if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
   if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno mañana para esos filtros.</p>`;return;}
 
-  const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes,sa_ciba:a.sa_ciba+(r.sa_ciba||0),sa_copeto:a.sa_copeto+(r.sa_copeto||0),sa_bassi:a.sa_bassi+(r.sa_bassi||0),sa_oeste:a.sa_oeste+(r.sa_oeste||0),sa_pocho_bernardo:a.sa_pocho_bernardo+(r.sa_pocho_bernardo||0),sa_cgyl:a.sa_cgyl+(r.sa_cgyl||0),sa_novara:a.sa_novara+(r.sa_novara||0),sa_global:a.sa_global+(r.sa_global||0),sa_games:a.sa_games+(r.sa_games||0)}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0,sa_ciba:0,sa_copeto:0,sa_bassi:0,sa_oeste:0,sa_pocho_bernardo:0,sa_cgyl:0,sa_novara:0,sa_global:0,sa_games:0});
+  const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0});
   const m=calcMetrics(tot);
+
+  // Desglose de competencias sumando todos los registros del filtro.
+  const saTot={};
+  COMPETENCIAS.forEach(c=>{ saTot[c.col]=0; });
+  data.forEach(r=>{ COMPETENCIAS.forEach(c=>{ saTot[c.col]+=(+r[c.col]||0); }); });
+  const saTotalGlobal=COMPETENCIAS.reduce((a,c)=>a+saTot[c.col],0);
 
   let comparacionHtml="";
   if(barrio_id && grupo_id){
     const {data:prev}=await sb.from("registros_diarios").select("*").eq("barrio_id",barrio_id).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
     if(prev&&prev.length){
-      const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas},{visitas:0,atendidos:0,ventas:0}));
+      const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas}),{visitas:0,atendidos:0,ventas:0});
       const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
       const delta=(m.tasa_contacto-ptasa).toFixed(1).replace(".",",");
       comparacionHtml=`<p class="hint">Comparado con los últimos ${prev.length} día(s) en este barrio/grupo: tasa de contacto promedio anterior ${pct(ptasa)} (${delta>=0?"+":""}${delta} pts hoy), ventas promedio ${(p.ventas/prev.length).toFixed(1)}.</p>`;
     }
   }
+
+  // Celdas de desglose por competencia (solo las que tienen algún valor, para no saturar).
+  const saCells=COMPETENCIAS.filter(c=>saTot[c.col]>0)
+    .map(c=>`<div class="sacell"><div class="v">${saTot[c.col]}</div><div class="l">${c.label}</div></div>`).join("");
+  const saBloque = saTotalGlobal>0
+    ? `<h2 style="margin-top:22px;font-size:1rem">Servicio asistencial — desglose por competencia<small>Total: ${saTotalGlobal}</small></h2>
+       <div class="sagrid">${saCells}</div>`
+    : `<p class="hint" style="margin-top:18px">Sin servicio asistencial registrado para estos filtros.</p>`;
 
   el.innerHTML=`
     <div class="kpis">
@@ -432,10 +526,11 @@ async function cargarDashboard(){
       <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
       <div class="kpi"><div class="v st-obra">${m.obra_social}</div><div class="l">Obra social</div></div>
       <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+      <div class="kpi"><div class="v st-sa">${saTotalGlobal}</div><div class="l">Serv. asistencial</div></div>
     </div>
-    <div class="card" style="margin-top:16px"><h2>Servicio asistencial — desglose por competencia <small>Personas que ya tenían cobertura de la competencia (total del turno mañana)</small></h2><div class="kpi" style="margin-bottom:12px"><div class="v st-obra">${(tot.sa_ciba||0)+(tot.sa_copeto||0)+(tot.sa_bassi||0)+(tot.sa_oeste||0)+(tot.sa_pocho_bernardo||0)+(tot.sa_cgyl||0)+(tot.sa_novara||0)+(tot.sa_global||0)+(tot.sa_games||0)}</div><div class="l">Total servicio asistencial</div></div><div class="kpis"><div class="kpi"><div class="v st-obra">${tot.sa_ciba||0}</div><div class="l">Ciba</div></div><div class="kpi"><div class="v st-obra">${tot.sa_copeto||0}</div><div class="l">Copeto</div></div><div class="kpi"><div class="v st-obra">${tot.sa_bassi||0}</div><div class="l">Bassi</div></div><div class="kpi"><div class="v st-obra">${tot.sa_oeste||0}</div><div class="l">Oeste</div></div><div class="kpi"><div class="v st-obra">${tot.sa_pocho_bernardo||0}</div><div class="l">Pocho Bernardo</div></div><div class="kpi"><div class="v st-obra">${tot.sa_cgyl||0}</div><div class="l">CGYL</div></div><div class="kpi"><div class="v st-obra">${tot.sa_novara||0}</div><div class="l">Novara</div></div><div class="kpi"><div class="v st-obra">${tot.sa_global||0}</div><div class="l">Global</div></div><div class="kpi"><div class="v st-obra">${tot.sa_games||0}</div><div class="l">Games</div></div></div></div>
     <div id="dashRec"></div>
-    ${comparacionHtml}`;
+    ${comparacionHtml}
+    ${saBloque}`;
   renderRecCard($("dashRec"), m);
 }
 cargarCatalogos().then(()=>{ cargarRegistrosDeHoy(); cargarDashboard(); });
@@ -444,7 +539,6 @@ cargarCatalogos().then(()=>{ cargarRegistrosDeHoy(); cargarDashboard(); });
    C. VISTA SEMANAL
 ============================================ */
 function isoWeekToMonday(isoWeek){
-  // isoWeek: "YYYY-Www"
   const [y,w]=isoWeek.split("-W").map(Number);
   const simple=new Date(Date.UTC(y,0,1+(w-1)*7));
   const dow=simple.getUTCDay()||7;
@@ -477,7 +571,7 @@ async function cargarSemana(){
     return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
-    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-obra">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-sa">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
   }).join("");
 
   const byBarrio=new Map();
@@ -519,7 +613,7 @@ async function cargarMes(){
     return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
-    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-obra">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-sa">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
   }).join("");
 
   const byBarrio=new Map();
@@ -545,10 +639,11 @@ const hoy=todayStr();
 const hace30=new Date(); hace30.setDate(hace30.getDate()-30);
 $("pDesde").value=hace30.toISOString().slice(0,10);
 $("pHasta").value=hoy;
+
 /* ===== Historial por barrio ===== */
 function fillBarrioDatalist(){
   const dl = $("hBarrioList");
-  if(!dl || !window.BARRIOS && typeof BARRIOS==="undefined") return;
+  if(!dl) return;
   const arr = (typeof BARRIOS!=="undefined")?BARRIOS:[];
   dl.innerHTML = arr.map(b => `<option value="${b.nombre}${b.zona? " — "+b.zona : ""}">`).join("");
 }
@@ -576,16 +671,12 @@ async function cargarHistorialBarrio(){
   const GARR = (typeof GRUPOS!=="undefined")?GRUPOS:[];
   const gname = id => { const g=GARR.find(x=>x.id===id); return g? g.nombre : "—"; };
   const esc = v => v==null? "" : String(v).replace(/</g,"&lt;");
-  const cell = (r) => r ? `<td>${gname(r.grupo_id)}</td><td>${pct(r.visitas)}</td><td>${pct(r.atendidos)}</td><td>${pct(r.ventas)}</td><td>${pct(r.datos)}</td><td>${pct(r.obra_social)}</td><td>${pct(r.ausentes)}</td><td>${esc(r.notas)}</td>` : `<td colspan="8" style="opacity:.5">sin registro</td>`;
-  let html = `<h3 style="margin:6px 0 12px">${barrio.nombre}${barrio.zona? " — "+barrio.zona:""} <span style="opacity:.6;
-      const SA_COLS=['sa_ciba','sa_copeto','sa_bassi','sa_oeste','sa_pocho_bernardo','sa_cgyl','sa_novara','sa_global','sa_games']; const SA_LABEL={sa_ciba:'Ciba',sa_copeto:'Copeto',sa_bassi:'Bassi',sa_oeste:'Oeste',sa_pocho_bernardo:'Pocho Bernardo',sa_cgyl:'CGYL',sa_novara:'Novara',sa_global:'Global',sa_games:'Games'};
-      const saAgg={}; SA_COLS.forEach(c=>saAgg[c]=0);
-      for(const _r of data){ SA_COLS.forEach(c=>saAgg[c]+=(_r[c]||0)); }
-      const saTotal=SA_COLS.reduce((s,c)=>s+saAgg[c],0);
-      const saChips=SA_COLS.map(c=>'<div class="kpi"><div class="v st-obra">'+saAgg[c]+'</div><div class="l">'+SA_LABEL[c]+'</div></div>').join('');
-      html += '<div class="card" style="margin-top:6px"><h2>Servicio asistencial — desglose por competencia <small>Acumulado histórico de este barrio</small></h2><div class="kpi" style="margin-bottom:12px"><div class="v st-obra">'+saTotal+'</div><div class="l">Total servicio asistencial</div></div><div class="kpis">'+saChips+'</div></div>';font-weight:400">(${data.length} registro/s)</span></h3>`;
+  // BUG CORREGIDO: acá se usaba pct() sobre valores que son cantidades, no porcentajes.
+  // Ahora se muestran como números enteros con num().
+  const cell = (r) => r ? `<td>${gname(r.grupo_id)}</td><td>${num(r.visitas)}</td><td>${num(r.atendidos)}</td><td>${num(r.ventas)}</td><td>${num(r.datos)}</td><td>${num(r.obra_social)}</td><td>${num(r.ausentes)}</td><td class="st-sa">${num(sumaSA(r))}</td><td>${esc(r.notas)}</td>` : `<td colspan="9" style="opacity:.5">sin registro</td>`;
+  let html = `<h3 style="margin:6px 0 12px">${barrio.nombre}${barrio.zona? " — "+barrio.zona:""} <span style="opacity:.6;font-weight:400">(${data.length} registro/s)</span></h3>`;
   html += `<div style="overflow-x:auto"><table class="tbl" style="width:100%;border-collapse:collapse;font-size:.9rem">`;
-  html += `<thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Fecha</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Turno</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Grupo</th><th style="padding:6px;border-bottom:1px solid var(--line)">Visitas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Atendidos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ventas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Datos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Obra soc.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ausentes</th><th style="padding:6px;border-bottom:1px solid var(--line)">Notas</th></tr></thead><tbody>`;
+  html += `<thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Fecha</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Turno</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Grupo</th><th style="padding:6px;border-bottom:1px solid var(--line)">Visitas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Atendidos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ventas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Datos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Obra soc.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ausentes</th><th style="padding:6px;border-bottom:1px solid var(--line)">Serv. asist.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Notas</th></tr></thead><tbody>`;
   for(const f of fechas){
     const regs = byDate[f];
     const manana = regs.find(r => norm(r.turno)==="mañana");
