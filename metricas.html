@@ -178,7 +178,7 @@ tr:last-child td{border-bottom:none}
       <button class="btn ghost" id="btnSemanaVer">Ver semana</button>
     </div>
     <div class="tablewrap"><table id="semTable"><thead>
-      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th>Días</th></tr>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-obra">Serv. asistencial</th><th>Días</th></tr>
     </thead><tbody></tbody></table></div>
     <p class="empty" id="semEmpty" style="display:none">No hay registros cargados para esa semana.</p>
     <div class="chartbox"><canvas id="semChart" height="90"></canvas></div>
@@ -194,7 +194,7 @@ tr:last-child td{border-bottom:none}
       <button class="btn ghost" id="btnMesVer">Ver mes</button>
     </div>
     <div class="tablewrap"><table id="mesTable"><thead>
-      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th>Días</th></tr>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-obra">Serv. asistencial</th><th>Días</th></tr>
     </thead><tbody></tbody></table></div>
     <p class="empty" id="mesEmpty" style="display:none">No hay registros cargados para ese mes.</p>
   </div>
@@ -408,7 +408,7 @@ async function cargarDashboard(){
   if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
   if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno mañana para esos filtros.</p>`;return;}
 
-  const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0});
+  const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes,sa_ciba:a.sa_ciba+(r.sa_ciba||0),sa_copeto:a.sa_copeto+(r.sa_copeto||0),sa_bassi:a.sa_bassi+(r.sa_bassi||0),sa_oeste:a.sa_oeste+(r.sa_oeste||0),sa_pocho_bernardo:a.sa_pocho_bernardo+(r.sa_pocho_bernardo||0),sa_cgyl:a.sa_cgyl+(r.sa_cgyl||0),sa_novara:a.sa_novara+(r.sa_novara||0),sa_global:a.sa_global+(r.sa_global||0),sa_games:a.sa_games+(r.sa_games||0)}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0,sa_ciba:0,sa_copeto:0,sa_bassi:0,sa_oeste:0,sa_pocho_bernardo:0,sa_cgyl:0,sa_novara:0,sa_global:0,sa_games:0});
   const m=calcMetrics(tot);
 
   let comparacionHtml="";
@@ -433,6 +433,7 @@ async function cargarDashboard(){
       <div class="kpi"><div class="v st-obra">${m.obra_social}</div><div class="l">Obra social</div></div>
       <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
     </div>
+    <div class="card" style="margin-top:16px"><h2>Servicio asistencial — desglose por competencia <small>Personas que ya tenían cobertura de la competencia (total del turno mañana)</small></h2><div class="kpi" style="margin-bottom:12px"><div class="v st-obra">${(tot.sa_ciba||0)+(tot.sa_copeto||0)+(tot.sa_bassi||0)+(tot.sa_oeste||0)+(tot.sa_pocho_bernardo||0)+(tot.sa_cgyl||0)+(tot.sa_novara||0)+(tot.sa_global||0)+(tot.sa_games||0)}</div><div class="l">Total servicio asistencial</div></div><div class="kpis"><div class="kpi"><div class="v st-obra">${tot.sa_ciba||0}</div><div class="l">Ciba</div></div><div class="kpi"><div class="v st-obra">${tot.sa_copeto||0}</div><div class="l">Copeto</div></div><div class="kpi"><div class="v st-obra">${tot.sa_bassi||0}</div><div class="l">Bassi</div></div><div class="kpi"><div class="v st-obra">${tot.sa_oeste||0}</div><div class="l">Oeste</div></div><div class="kpi"><div class="v st-obra">${tot.sa_pocho_bernardo||0}</div><div class="l">Pocho Bernardo</div></div><div class="kpi"><div class="v st-obra">${tot.sa_cgyl||0}</div><div class="l">CGYL</div></div><div class="kpi"><div class="v st-obra">${tot.sa_novara||0}</div><div class="l">Novara</div></div><div class="kpi"><div class="v st-obra">${tot.sa_global||0}</div><div class="l">Global</div></div><div class="kpi"><div class="v st-obra">${tot.sa_games||0}</div><div class="l">Games</div></div></div></div>
     <div id="dashRec"></div>
     ${comparacionHtml}`;
   renderRecCard($("dashRec"), m);
@@ -476,7 +477,7 @@ async function cargarSemana(){
     return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
-    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-obra">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
   }).join("");
 
   const byBarrio=new Map();
@@ -518,7 +519,7 @@ async function cargarMes(){
     return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
-    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-obra">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
   }).join("");
 
   const byBarrio=new Map();
@@ -576,7 +577,13 @@ async function cargarHistorialBarrio(){
   const gname = id => { const g=GARR.find(x=>x.id===id); return g? g.nombre : "—"; };
   const esc = v => v==null? "" : String(v).replace(/</g,"&lt;");
   const cell = (r) => r ? `<td>${gname(r.grupo_id)}</td><td>${pct(r.visitas)}</td><td>${pct(r.atendidos)}</td><td>${pct(r.ventas)}</td><td>${pct(r.datos)}</td><td>${pct(r.obra_social)}</td><td>${pct(r.ausentes)}</td><td>${esc(r.notas)}</td>` : `<td colspan="8" style="opacity:.5">sin registro</td>`;
-  let html = `<h3 style="margin:6px 0 12px">${barrio.nombre}${barrio.zona? " — "+barrio.zona:""} <span style="opacity:.6;font-weight:400">(${data.length} registro/s)</span></h3>`;
+  let html = `<h3 style="margin:6px 0 12px">${barrio.nombre}${barrio.zona? " — "+barrio.zona:""} <span style="opacity:.6;
+      const SA_COLS=['sa_ciba','sa_copeto','sa_bassi','sa_oeste','sa_pocho_bernardo','sa_cgyl','sa_novara','sa_global','sa_games']; const SA_LABEL={sa_ciba:'Ciba',sa_copeto:'Copeto',sa_bassi:'Bassi',sa_oeste:'Oeste',sa_pocho_bernardo:'Pocho Bernardo',sa_cgyl:'CGYL',sa_novara:'Novara',sa_global:'Global',sa_games:'Games'};
+      const saAgg={}; SA_COLS.forEach(c=>saAgg[c]=0);
+      for(const _r of data){ SA_COLS.forEach(c=>saAgg[c]+=(_r[c]||0)); }
+      const saTotal=SA_COLS.reduce((s,c)=>s+saAgg[c],0);
+      const saChips=SA_COLS.map(c=>'<div class="kpi"><div class="v st-obra">'+saAgg[c]+'</div><div class="l">'+SA_LABEL[c]+'</div></div>').join('');
+      html += '<div class="card" style="margin-top:6px"><h2>Servicio asistencial — desglose por competencia <small>Acumulado histórico de este barrio</small></h2><div class="kpi" style="margin-bottom:12px"><div class="v st-obra">'+saTotal+'</div><div class="l">Total servicio asistencial</div></div><div class="kpis">'+saChips+'</div></div>';font-weight:400">(${data.length} registro/s)</span></h3>`;
   html += `<div style="overflow-x:auto"><table class="tbl" style="width:100%;border-collapse:collapse;font-size:.9rem">`;
   html += `<thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Fecha</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Turno</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Grupo</th><th style="padding:6px;border-bottom:1px solid var(--line)">Visitas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Atendidos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ventas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Datos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Obra soc.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ausentes</th><th style="padding:6px;border-bottom:1px solid var(--line)">Notas</th></tr></thead><tbody>`;
   for(const f of fechas){
