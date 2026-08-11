@@ -141,7 +141,10 @@ tr:last-child td{border-bottom:none}
     <h2>Registrar métricas<small>Cargá el turno mañana para recibir la recomendación, o el turno tarde para cerrar el día.</small></h2>
     <div class="loadrow">
       <div class="field"><label for="cGrupo">Grupo</label><select id="cGrupo"></select></div>
-      <div class="field"><label for="cBarrio">Barrio</label><select id="cBarrio"></select></div>
+      <div class="field"><label for="cBarrio">Barrio</label>
+        <input type="text" id="cBarrio" list="cBarrioList" placeholder="Escribí o elegí un barrio" autocomplete="off">
+        <datalist id="cBarrioList"></datalist>
+      </div>
       <div class="field"><label for="cFecha">Fecha</label><input type="date" id="cFecha"></div>
       <div class="field"><label for="cTurno">Turno</label>
         <select id="cTurno"><option value="mañana">Mañana</option><option value="tarde">Tarde</option></select>
@@ -316,9 +319,8 @@ if(!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes("TU_PROJECT_URL") || !SU
 function initApp(){
 const sb=window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
-let GRUPOS=[], BARRIOS=[];
+let GRUPOS=[], BARRIOS=[];   // BARRIOS = array de strings (nombres de barrio)
 const grupoById=id=>GRUPOS.find(g=>g.id===id);
-const barrioById=id=>BARRIOS.find(b=>b.id===id);
 const pct=v=>(v==null?0:v).toString().replace(".",",")+"%";
 const num=v=>(v==null?0:v).toString();
 const todayStr=()=>new Date().toISOString().slice(0,10);
@@ -366,15 +368,20 @@ construirInputsSA();
 async function cargarCatalogos(){
   const [{data:g,error:ge},{data:b,error:be}]=await Promise.all([
     sb.from("grupos").select("*").order("nombre"),
-    sb.from("barrios").select("*").order("nombre")
+    sb.from("barrios_usados").select("barrio").order("barrio")
   ]);
   if(ge||be){ showMsg("cMsg", "Error al conectar con Supabase: "+((ge||be).message), false); return; }
-  GRUPOS=g||[]; BARRIOS=b||[];
+  GRUPOS=g||[];
+  // barrios_usados devuelve [{barrio:"alberdi"}, ...]; nos quedamos con los nombres.
+  BARRIOS=(b||[]).map(x=>x.barrio).filter(Boolean);
   const gOpts=GRUPOS.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join("");
-  const bOpts=BARRIOS.map(x=>`<option value="${x.id}">${x.nombre}${x.zona?" — "+x.zona:""}</option>`).join("");
+  const bOpts=BARRIOS.map(nombre=>`<option value="${nombre}">${nombre}</option>`).join("");
   ["cGrupo","dGrupo"].forEach(id=>{$(id).innerHTML=(id==="dGrupo"?`<option value="">Todos</option>`:"")+gOpts;});
-  ["cBarrio","dBarrio"].forEach(id=>{$(id).innerHTML=(id==="dBarrio"?`<option value="">Todos</option>`:"")+bOpts;});
-  $("pChips").innerHTML=BARRIOS.map(b=>`<span class="chip" data-id="${b.id}">${b.nombre}</span>`).join("");
+  // Carga manual: barrio como texto libre con sugerencias (datalist).
+  $("cBarrioList").innerHTML=BARRIOS.map(nombre=>`<option value="${nombre}">`).join("");
+  // Dashboard: barrio como filtro desplegable.
+  $("dBarrio").innerHTML=`<option value="">Todos</option>`+bOpts;
+  $("pChips").innerHTML=BARRIOS.map(nombre=>`<span class="chip" data-barrio="${nombre}">${nombre}</span>`).join("");
   $("pChips").querySelectorAll(".chip").forEach(c=>c.onclick=()=>c.classList.toggle("on"));
 }
 
@@ -420,10 +427,11 @@ function showMsg(id,t,ok){const m=$(id);m.textContent=t;m.className="msg "+(ok?"
 $("cFecha").value=todayStr();
 
 $("btnGuardar").onclick=async ()=>{
-  const grupo_id=$("cGrupo").value, barrio_id=$("cBarrio").value;
-  if(!grupo_id||!barrio_id){showMsg("cMsg","Elegí grupo y barrio.",false);return;}
+  const grupo_id=$("cGrupo").value;
+  const barrio=($("cBarrio").value||"").trim().replace(/\s+/g," ");
+  if(!grupo_id||!barrio){showMsg("cMsg","Elegí grupo y escribí un barrio.",false);return;}
   const row={
-    grupo_id, barrio_id,
+    grupo_id, barrio,
     fecha: $("cFecha").value || todayStr(),
     turno: $("cTurno").value,
     visitas: +$("nVisitas").value||0,
@@ -442,6 +450,13 @@ $("btnGuardar").onclick=async ()=>{
   renderRecCard($("cRec"), calcMetrics(data));
   ["nVisitas","nAtendidos","nVentas","nDatos","nObra","nAusentes"].forEach(id=>$(id).value=0);
   limpiarInputsSA();
+  // Si el barrio es nuevo, sumarlo a las sugerencias sin recargar la página.
+  if(barrio && !BARRIOS.some(x=>x.toLowerCase()===barrio.toLowerCase())){
+    BARRIOS.push(barrio);
+    BARRIOS.sort((a,b)=>a.localeCompare(b));
+    $("cBarrioList").innerHTML=BARRIOS.map(n=>`<option value="${n}">`).join("");
+  }
+  $("cBarrio").value="";
   $("cNotas").value="";
   cargarRegistrosDeHoy();
 };
@@ -454,13 +469,13 @@ async function cargarRegistrosDeHoy(){
   if(!data||!data.length){list.innerHTML="";$("hoyEmpty").style.display="block";return;}
   $("hoyEmpty").style.display="none";
   list.innerHTML=data.map(r=>{
-    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
+    const g=grupoById(r.grupo_id);
     const gcolor=g?.color||"#80bbb3";
     const sa=sumaSA(r);
     return `<div class="loaditem">
       <span><span class="gtag" style="color:${gcolor};border-color:${gcolor}">${g?g.nombre:"—"}</span>
       <span class="ttag">${r.turno}</span>
-      &nbsp;<b>${b?b.nombre:"—"}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span> · <span class="st-sa">Serv. asist. ${sa}</span></span>
+      &nbsp;<b>${r.barrio||"—"}</b> — Visitas ${r.visitas} · Atendidos ${r.atendidos} · <span class="st-venta">Ventas ${r.ventas}</span> · <span class="st-dato">Datos ${r.datos}</span> · <span class="st-sa">Serv. asist. ${sa}</span></span>
       <button class="btn del" data-id="${r.id}">Eliminar</button>
     </div>`;
   }).join("");
@@ -479,10 +494,10 @@ $("btnDashRefrescar").onclick=cargarDashboard;
 
 async function cargarDashboard(){
   const fecha=$("dFecha").value||todayStr();
-  const grupo_id=$("dGrupo").value, barrio_id=$("dBarrio").value;
+  const grupo_id=$("dGrupo").value, barrio=$("dBarrio").value;
   let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno","mañana");
   if(grupo_id) q=q.eq("grupo_id",grupo_id);
-  if(barrio_id) q=q.eq("barrio_id",barrio_id);
+  if(barrio) q=q.eq("barrio",barrio);
   const {data,error}=await q;
   const el=$("dashContent");
   if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
@@ -498,8 +513,8 @@ async function cargarDashboard(){
   const saTotalGlobal=COMPETENCIAS.reduce((a,c)=>a+saTot[c.col],0);
 
   let comparacionHtml="";
-  if(barrio_id && grupo_id){
-    const {data:prev}=await sb.from("registros_diarios").select("*").eq("barrio_id",barrio_id).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
+  if(barrio && grupo_id){
+    const {data:prev}=await sb.from("registros_diarios").select("*").eq("barrio",barrio).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
     if(prev&&prev.length){
       const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas}),{visitas:0,atendidos:0,ventas:0});
       const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
@@ -567,8 +582,8 @@ async function cargarSemana(){
   if(error||!data||!data.length){tbody.innerHTML="";$("semEmpty").style.display="block";if(semChartInst)semChartInst.destroy();return;}
   $("semEmpty").style.display="none";
   tbody.innerHTML=data.map(r=>{
-    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
-    return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
+    const g=grupoById(r.grupo_id);
+    return `<tr><td><b>${r.barrio||"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
     <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-sa">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
@@ -576,7 +591,7 @@ async function cargarSemana(){
 
   const byBarrio=new Map();
   data.forEach(r=>{
-    const b=barrioById(r.barrio_id); const key=b?b.nombre:"—";
+    const key=r.barrio||"—";
     const cur=byBarrio.get(key)||{visitas:0,atendidos:0};
     cur.visitas+=r.total_visitas; cur.atendidos+=r.total_atendidos;
     byBarrio.set(key,cur);
@@ -609,8 +624,8 @@ async function cargarMes(){
   }
   $("mesEmpty").style.display="none";
   tbody.innerHTML=data.map(r=>{
-    const g=grupoById(r.grupo_id), b=barrioById(r.barrio_id);
-    return `<tr><td><b>${b?b.nombre:"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
+    const g=grupoById(r.grupo_id);
+    return `<tr><td><b>${r.barrio||"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?g.nombre:"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
     <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-sa">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
@@ -618,7 +633,7 @@ async function cargarMes(){
 
   const byBarrio=new Map();
   data.forEach(r=>{
-    const b=barrioById(r.barrio_id); const key=b?b.nombre:"—";
+    const key=r.barrio||"—";
     const cur=byBarrio.get(key)||{visitas:0,ventas:0};
     cur.visitas+=r.total_visitas; cur.ventas+=r.total_ventas;
     byBarrio.set(key,cur);
@@ -645,7 +660,7 @@ function fillBarrioDatalist(){
   const dl = $("hBarrioList");
   if(!dl) return;
   const arr = (typeof BARRIOS!=="undefined")?BARRIOS:[];
-  dl.innerHTML = arr.map(b => `<option value="${b.nombre}${b.zona? " — "+b.zona : ""}">`).join("");
+  dl.innerHTML = arr.map(nombre => `<option value="${nombre}">`).join("");
 }
 async function cargarHistorialBarrio(){
   const cont = $("histContent");
@@ -657,14 +672,14 @@ async function cargarHistorialBarrio(){
   const norm = s => (s||"").toString().trim().toLowerCase();
   const typedName = raw.split("—")[0].trim();
   const arr = (typeof BARRIOS!=="undefined")?BARRIOS:[];
-  let barrio = arr.find(b => norm(b.nombre) === typedName);
-  if(!barrio) barrio = arr.find(b => norm(b.nombre).includes(typedName) && typedName.length>=2);
+  let barrio = arr.find(nombre => norm(nombre) === typedName);
+  if(!barrio) barrio = arr.find(nombre => norm(nombre).includes(typedName) && typedName.length>=2);
   if(!barrio){ empty.style.display="block"; empty.textContent="No encontré un barrio con ese nombre. Probá con otro."; return; }
   empty.style.display="none";
   cont.innerHTML = `<p class="empty">Cargando…</p>`;
-  const { data, error } = await sb.from("registros_diarios").select("*").eq("barrio_id", barrio.id).order("fecha",{ascending:false});
+  const { data, error } = await sb.from("registros_diarios").select("*").eq("barrio", barrio).order("fecha",{ascending:false});
   if(error){ cont.innerHTML = `<p class="empty">Error al cargar: ${error.message}</p>`; return; }
-  if(!data || !data.length){ cont.innerHTML = `<p class="empty">Todavía no hay registros para ${barrio.nombre}.</p>`; return; }
+  if(!data || !data.length){ cont.innerHTML = `<p class="empty">Todavía no hay registros para ${barrio}.</p>`; return; }
   const byDate = {};
   for(const r of data){ (byDate[r.fecha] = byDate[r.fecha] || []).push(r); }
   const fechas = Object.keys(byDate).sort((a,b)=> b.localeCompare(a));
@@ -674,7 +689,7 @@ async function cargarHistorialBarrio(){
   // BUG CORREGIDO: acá se usaba pct() sobre valores que son cantidades, no porcentajes.
   // Ahora se muestran como números enteros con num().
   const cell = (r) => r ? `<td>${gname(r.grupo_id)}</td><td>${num(r.visitas)}</td><td>${num(r.atendidos)}</td><td>${num(r.ventas)}</td><td>${num(r.datos)}</td><td>${num(r.obra_social)}</td><td>${num(r.ausentes)}</td><td class="st-sa">${num(sumaSA(r))}</td><td>${esc(r.notas)}</td>` : `<td colspan="9" style="opacity:.5">sin registro</td>`;
-  let html = `<h3 style="margin:6px 0 12px">${barrio.nombre}${barrio.zona? " — "+barrio.zona:""} <span style="opacity:.6;font-weight:400">(${data.length} registro/s)</span></h3>`;
+  let html = `<h3 style="margin:6px 0 12px">${barrio} <span style="opacity:.6;font-weight:400">(${data.length} registro/s)</span></h3>`;
   html += `<div style="overflow-x:auto"><table class="tbl" style="width:100%;border-collapse:collapse;font-size:.9rem">`;
   html += `<thead><tr><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Fecha</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Turno</th><th style="text-align:left;padding:6px;border-bottom:1px solid var(--line)">Grupo</th><th style="padding:6px;border-bottom:1px solid var(--line)">Visitas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Atendidos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ventas</th><th style="padding:6px;border-bottom:1px solid var(--line)">Datos</th><th style="padding:6px;border-bottom:1px solid var(--line)">Obra soc.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Ausentes</th><th style="padding:6px;border-bottom:1px solid var(--line)">Serv. asist.</th><th style="padding:6px;border-bottom:1px solid var(--line)">Notas</th></tr></thead><tbody>`;
   for(const f of fechas){
@@ -694,22 +709,22 @@ $("btnCompararVer").onclick=cargarComparativa;
 let pChartInst=null;
 
 async function cargarComparativa(){
-  const ids=[...$("pChips").querySelectorAll(".chip.on")].map(c=>c.dataset.id);
+  const barrios=[...$("pChips").querySelectorAll(".chip.on")].map(c=>c.dataset.barrio);
   const desde=$("pDesde").value, hasta=$("pHasta").value;
-  if(!ids.length||!desde||!hasta){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
-  const {data,error}=await sb.from("registros_diarios").select("*").in("barrio_id",ids).gte("fecha",desde).lte("fecha",hasta);
+  if(!barrios.length||!desde||!hasta){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
+  const {data,error}=await sb.from("registros_diarios").select("*").in("barrio",barrios).gte("fecha",desde).lte("fecha",hasta);
   if(error||!data||!data.length){$("pEmpty").style.display="block";if(pChartInst)pChartInst.destroy();return;}
   $("pEmpty").style.display="none";
 
   const byBarrio=new Map();
   data.forEach(r=>{
-    const cur=byBarrio.get(r.barrio_id)||{visitas:0,atendidos:0,ventas:0};
+    const cur=byBarrio.get(r.barrio)||{visitas:0,atendidos:0,ventas:0};
     cur.visitas+=r.visitas; cur.atendidos+=r.atendidos; cur.ventas+=r.ventas;
-    byBarrio.set(r.barrio_id,cur);
+    byBarrio.set(r.barrio,cur);
   });
-  const labels=ids.map(id=>barrioById(id)?.nombre||"—");
-  const tasaContacto=ids.map(id=>{const v=byBarrio.get(id);return v&&v.visitas?Math.round((v.atendidos/v.visitas)*1000)/10:0;});
-  const tasaVenta=ids.map(id=>{const v=byBarrio.get(id);return v&&v.visitas?Math.round((v.ventas/v.visitas)*1000)/10:0;});
+  const labels=barrios;
+  const tasaContacto=barrios.map(nombre=>{const v=byBarrio.get(nombre);return v&&v.visitas?Math.round((v.atendidos/v.visitas)*1000)/10:0;});
+  const tasaVenta=barrios.map(nombre=>{const v=byBarrio.get(nombre);return v&&v.visitas?Math.round((v.ventas/v.visitas)*1000)/10:0;});
 
   if(pChartInst)pChartInst.destroy();
   pChartInst=new Chart($("pChart"),{type:"bar",data:{labels,datasets:[
