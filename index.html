@@ -92,6 +92,12 @@ input[type=file]{display:none}
 .sacell .v{font-size:1.2rem;font-weight:800;color:var(--sa)}
 .sacell .l{color:var(--muted);font-size:.72rem;margin-top:3px}
 
+.turno-block{margin-top:22px}
+.turno-title{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.turno-title .pill{font-size:.72rem;font-weight:700;padding:3px 12px;border-radius:999px}
+.pill-manana{background:rgba(251,191,36,.2);color:#fde68a;border:1px solid var(--dato)}
+.pill-tarde{background:rgba(94,129,201,.2);color:#a9bde6;border:1px solid var(--sa)}
+
 .groupgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px}
 .gcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;border-top:3px solid var(--gc,var(--accent))}
 .gcard h3{font-size:1rem;font-weight:800;display:flex;justify-content:space-between;align-items:center}
@@ -153,7 +159,7 @@ tr:last-child td{border-bottom:none}
 <div class="brandbar">
   <span class="logobox"><img src="https://previncasalud.com.ar/wp-content/uploads/2023/10/logo-previnca.svg" alt="Previnca Salud"></span>
 </div>
-<p class="sub">Las métricas se cargan <b>automáticamente</b> desde los CSV que los vendedores exportan a Drive. Entrá al <b>Dashboard</b> para ver los datos del día por grupo y barrio, y consultá las vistas semanal, mensual e historial. La pestaña de carga manual queda como respaldo.</p>
+<p class="sub">Las métricas se cargan <b>automáticamente</b> desde los CSV que los vendedores exportan a Drive. Entrá al <b>Dashboard</b> para ver los datos del día por grupo y barrio, usá <b>Por grupo</b> para ver el rendimiento de un líder en un rango de fechas sin importar el barrio, y consultá las vistas semanal, mensual e historial. La pestaña de carga manual queda como respaldo.</p>
 
 <div id="setupBanner" class="setup" style="display:none">
   ⚠️ <b>Sin conexión a Supabase configurada.</b> Para activarla, completá el bloque <code>SUPABASE_CONFIG</code> al inicio del script con tu <code>url</code> y <code>anonKey</code> (Supabase → Settings → API).
@@ -161,6 +167,7 @@ tr:last-child td{border-bottom:none}
 
 <div class="tabs">
   <button class="tab active supa-only" data-view="dashboard">Dashboard</button>
+  <button class="tab supa-only" data-view="porgrupo">Por grupo</button>
   <button class="tab supa-only" data-view="semanal">Vista semanal</button>
   <button class="tab supa-only" data-view="mensual">Vista mensual</button>
   <button class="tab supa-only" data-view="comparativa">Comparativa de barrios</button>
@@ -173,14 +180,29 @@ tr:last-child td{border-bottom:none}
 <!-- ============ DASHBOARD DEL DÍA ============ -->
 <div class="view active" id="view-dashboard">
   <div class="card">
-    <h2>Dashboard del día<small>Datos cargados automáticamente desde Drive. Elegí fecha, grupo y barrio.</small></h2>
+    <h2>Dashboard del día<small>Datos cargados automáticamente desde Drive. Elegí fecha, grupo, turno y barrio.</small></h2>
     <div class="loadrow">
       <div class="field"><label for="dFecha">Fecha</label><input type="date" id="dFecha"></div>
       <div class="field"><label for="dGrupo">Grupo</label><select id="dGrupo"></select></div>
+      <div class="field"><label for="dTurno">Turno</label><select id="dTurno"><option value="mañana">Mañana</option><option value="tarde">Tarde</option></select></div>
       <div class="field"><label for="dBarrio">Barrio</label><input type="text" id="dBarrio" list="barriosDatalist" autocomplete="off" placeholder="Todos"></div>
       <button class="btn ghost" id="btnDashRefrescar">Ver</button>
     </div>
     <div id="dashContent"></div>
+  </div>
+</div>
+
+<!-- ============ POR GRUPO (rango de fechas) ============ -->
+<div class="view" id="view-porgrupo">
+  <div class="card">
+    <h2>Rendimiento por grupo<small>Elegí un líder y un rango de fechas. Ves el total del grupo y el desglose por barrio, sin importar en qué barrio estuvo cada día. Mañana y tarde se muestran separados.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="gGrupo">Grupo</label><select id="gGrupo"></select></div>
+      <div class="field"><label for="gDesde">Desde</label><input type="date" id="gDesde"></div>
+      <div class="field"><label for="gHasta">Hasta</label><input type="date" id="gHasta"></div>
+      <button class="btn ghost" id="btnGrupoVer">Ver</button>
+    </div>
+    <div id="grupoContent"><p class="empty">Elegí un grupo y un rango de fechas, y tocá Ver.</p></div>
   </div>
 </div>
 
@@ -425,6 +447,7 @@ function fillGroupSelects(){
   $("selGroup").innerHTML=GRUPOS.map(g=>`<option value="${esc(g.nombre)}">${esc(g.nombre)}</option>`).join("");
   $("filtroContactos").innerHTML=`<option value="todos">Todos los grupos</option>`+GRUPOS.map(g=>`<option value="${esc(g.nombre)}">${esc(g.nombre)}</option>`).join("");
   $("dGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
+  $("gGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
 }
 $("inFecha").value=todayStr();
 
@@ -750,13 +773,14 @@ async function cargarDashboard(){
   if(!hasSupabase) return;
   const fecha=$("dFecha").value||todayStr();
   const grupo_id=$("dGrupo").value, barrio=$("dBarrio").value.trim();
-  let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno","mañana");
+  const turno=$("dTurno").value;
+  let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno",turno);
   if(grupo_id) q=q.eq("grupo_id",grupo_id);
   if(barrio) q=q.ilike("barrio",`%${barrio}%`);
   const {data,error}=await q;
   const el=$("dashContent");
   if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
-  if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno mañana para esos filtros.</p>`;return;}
+  if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno ${turno} para esos filtros.</p>`;return;}
   const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0});
   const m=calcMetrics(tot);
   const saTot={}; COMPETENCIAS.forEach(c=>{saTot[c.col]=0;});
@@ -764,7 +788,7 @@ async function cargarDashboard(){
   const saTotalGlobal=COMPETENCIAS.reduce((a,c)=>a+saTot[c.col],0);
   let comparacionHtml="";
   if(barrio && grupo_id){
-    const {data:prev}=await sb.from("registros_diarios").select("*").ilike("barrio",`%${barrio}%`).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
+    const {data:prev}=await sb.from("registros_diarios").select("*").ilike("barrio",`%${barrio}%`).eq("grupo_id",grupo_id).eq("turno",turno).lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
     if(prev&&prev.length){
       const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas}),{visitas:0,atendidos:0,ventas:0});
       const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
@@ -793,6 +817,137 @@ async function cargarDashboard(){
     ${comparacionHtml}
     ${saBloque}`;
   renderRecCard($("dashRec"), m);
+}
+
+/* ============================================
+   POR GRUPO — rango de fechas (Supabase)
+   Total del grupo + desglose por barrio, mañana y tarde separados.
+============================================ */
+const hace7=new Date(); hace7.setDate(hace7.getDate()-6);
+$("gDesde").value=dateStr(hace7);
+$("gHasta").value=todayStr();
+$("btnGrupoVer").onclick=cargarPorGrupo;
+
+// Suma un array de registros en un objeto de conteo total.
+function acumularRegistros(arr){
+  const base={visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0};
+  COMPETENCIAS.forEach(c=>base[c.col]=0);
+  arr.forEach(r=>{
+    base.visitas+=(+r.visitas||0); base.atendidos+=(+r.atendidos||0);
+    base.ventas+=(+r.ventas||0); base.datos+=(+r.datos||0);
+    base.obra_social+=(+r.obra_social||0); base.ausentes+=(+r.ausentes||0);
+    COMPETENCIAS.forEach(c=>base[c.col]+=(+r[c.col]||0));
+  });
+  return base;
+}
+
+function bloqueTurnoHtml(titulo,pillClass,regs){
+  if(!regs.length){
+    return `<div class="turno-block">
+      <div class="turno-title"><span class="pill ${pillClass}">${titulo}</span></div>
+      <p class="empty">Sin registros de ${titulo.toLowerCase()} en este rango.</p></div>`;
+  }
+  const tot=acumularRegistros(regs);
+  const m=calcMetrics(tot);
+  const saTotal=COMPETENCIAS.reduce((a,c)=>a+tot[c.col],0);
+
+  // Desglose por barrio dentro del turno.
+  const porBarrio=new Map();
+  regs.forEach(r=>{
+    const k=r.barrio||"—";
+    if(!porBarrio.has(k)) porBarrio.set(k,[]);
+    porBarrio.get(k).push(r);
+  });
+  const filas=[...porBarrio.entries()].map(([barrio,rr])=>{
+    const t=acumularRegistros(rr);
+    const mm=calcMetrics(t);
+    const dias=new Set(rr.map(x=>x.fecha)).size;
+    const saB=COMPETENCIAS.reduce((a,c)=>a+t[c.col],0);
+    return {barrio,t,mm,dias,saB};
+  }).sort((a,b)=>b.t.ventas-a.t.ventas);
+
+  const filasHtml=filas.map(f=>`<tr>
+    <td><b>${esc(f.barrio)}</b></td>
+    <td>${f.dias}</td>
+    <td>${f.t.visitas}</td>
+    <td>${f.t.atendidos}</td>
+    <td><b>${pct(f.mm.tasa_contacto)}</b></td>
+    <td class="st-venta">${f.t.ventas}</td>
+    <td>${pct(f.mm.tasa_venta)}</td>
+    <td class="st-dato">${f.t.datos}</td>
+    <td class="st-obra">${f.t.obra_social}</td>
+    <td class="st-ausente">${f.t.ausentes}</td>
+    <td class="st-sa">${f.saB}</td>
+  </tr>`).join("");
+
+  return `<div class="turno-block">
+    <div class="turno-title"><span class="pill ${pillClass}">${titulo}</span></div>
+    <div class="kpis" style="margin-top:10px">
+      <div class="kpi"><div class="v">${m.visitas}</div><div class="l">Visitas</div></div>
+      <div class="kpi"><div class="v">${m.atendidos}</div><div class="l">Atendidos</div></div>
+      <div class="kpi"><div class="v" style="color:var(--accent)">${pct(m.tasa_contacto)}</div><div class="l">Tasa de contacto</div></div>
+      <div class="kpi"><div class="v st-venta">${m.ventas}</div><div class="l">Ventas</div></div>
+      <div class="kpi"><div class="v">${pct(m.tasa_venta)}</div><div class="l">Tasa de venta</div></div>
+      <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
+      <div class="kpi"><div class="v st-obra">${m.obra_social}</div><div class="l">Obra social</div></div>
+      <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+      <div class="kpi"><div class="v st-sa">${saTotal}</div><div class="l">Serv. asistencial</div></div>
+    </div>
+    <h2 style="margin-top:18px;font-size:.95rem">Desglose por barrio</h2>
+    <div class="tablewrap"><table><thead>
+      <tr><th>Barrio</th><th>Días</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th></tr>
+    </thead><tbody>${filasHtml}</tbody></table></div>
+  </div>`;
+}
+
+async function cargarPorGrupo(){
+  if(!hasSupabase) return;
+  const el=$("grupoContent");
+  const grupo_id=$("gGrupo").value;
+  const desde=$("gDesde").value, hasta=$("gHasta").value;
+  if(!desde||!hasta){ el.innerHTML=`<p class="empty">Elegí desde y hasta.</p>`; return; }
+  let q=sb.from("registros_diarios").select("*").gte("fecha",desde).lte("fecha",hasta);
+  if(grupo_id) q=q.eq("grupo_id",grupo_id);
+  const {data,error}=await q;
+  if(error){ el.innerHTML=`<p class="empty">Error: ${error.message}</p>`; return; }
+  if(!data||!data.length){ el.innerHTML=`<p class="empty">No hay registros para ese grupo en ese rango de fechas.</p>`; return; }
+
+  const g=grupo_id?grupoById(grupo_id):null;
+  const nombreGrupo = g?g.nombre:"Todos los grupos";
+  const color = g?g.color:"#80bbb3";
+
+  // Total general (mañana + tarde juntos) para el encabezado.
+  const totGeneral=acumularRegistros(data);
+  const mGen=calcMetrics(totGeneral);
+  const saGen=COMPETENCIAS.reduce((a,c)=>a+totGeneral[c.col],0);
+  const barriosDistintos=[...new Set(data.map(r=>r.barrio))];
+  const diasDistintos=[...new Set(data.map(r=>r.fecha))];
+
+  const manana=data.filter(r=>r.turno==="mañana");
+  const tarde=data.filter(r=>r.turno==="tarde");
+
+  el.innerHTML=`
+    <div class="card" style="margin-top:16px;border-top:3px solid ${color}">
+      <h2>${esc(nombreGrupo)} — total del rango
+        <small>${fmtFechaCorta(desde)} a ${fmtFechaCorta(hasta)} · ${diasDistintos.length} día(s) con datos · ${barriosDistintos.length} barrio(s) recorrido(s) · mañana y tarde sumados</small></h2>
+      <div class="kpis">
+        <div class="kpi"><div class="v">${mGen.visitas}</div><div class="l">Visitas</div></div>
+        <div class="kpi"><div class="v">${mGen.atendidos}</div><div class="l">Atendidos</div></div>
+        <div class="kpi"><div class="v" style="color:var(--accent)">${pct(mGen.tasa_contacto)}</div><div class="l">Tasa de contacto</div></div>
+        <div class="kpi"><div class="v st-venta">${mGen.ventas}</div><div class="l">Ventas</div></div>
+        <div class="kpi"><div class="v">${pct(mGen.tasa_venta)}</div><div class="l">Tasa de venta</div></div>
+        <div class="kpi"><div class="v st-dato">${mGen.datos}</div><div class="l">Datos</div></div>
+        <div class="kpi"><div class="v st-obra">${mGen.obra_social}</div><div class="l">Obra social</div></div>
+        <div class="kpi"><div class="v st-ausente">${mGen.ausentes}</div><div class="l">Ausentes</div></div>
+        <div class="kpi"><div class="v st-sa">${saGen}</div><div class="l">Serv. asistencial</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      ${bloqueTurnoHtml("Mañana","pill-manana",manana)}
+    </div>
+    <div class="card" style="margin-top:16px">
+      ${bloqueTurnoHtml("Tarde","pill-tarde",tarde)}
+    </div>`;
 }
 
 /* ============================================
