@@ -367,13 +367,14 @@ const SUPABASE_CONFIG = {
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2trZWFuZ2N1cXhsdnJla3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyOTE1MTAsImV4cCI6MjEwMDg2NzUxMH0.SLS9yrUfBvl4UoRTXi3QBVM8TXVhNlydR4l2Vg9i01s"
 };
 
-/* Competencias (servicio asistencial). Para agregar/sacar, editá SOLO esta lista. */
+/* Servicio asistencial (competencia + Previnca). Previnca es NUESTRO servicio ya existente
+   en la casa; se cuenta junto con el resto del servicio asistencial. Para agregar/sacar, editá SOLO esta lista. */
 const COMPETENCIAS = [
   { col: "sa_ciba", label: "Ciba" }, { col: "sa_copeto", label: "Copeto" },
   { col: "sa_bassi", label: "Bassi" }, { col: "sa_oeste", label: "Oeste" },
   { col: "sa_pocho_bernardo", label: "Pocho Bernardo" }, { col: "sa_cgyl", label: "CGYL" },
   { col: "sa_novara", label: "Novara" }, { col: "sa_global", label: "Global" },
-  { col: "sa_games", label: "Games" }
+  { col: "sa_games", label: "Games" }, { col: "sa_previnca", label: "Previnca" }
 ];
 const sumaSA = r => COMPETENCIAS.reduce((a,c)=>a+(+r[c.col]||0), 0);
 
