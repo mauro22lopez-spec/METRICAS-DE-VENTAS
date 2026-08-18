@@ -4,7 +4,15 @@ App de métricas de ventas domiciliarias para Previnca Salud (Gran Rosario).
 
 ## Páginas
 
-- **`index.html`** — App principal unificada. Subís el CSV que exporta tu app de campo, lo asignás a un grupo, barrio y turno, ves el reporte del recorrido (tasa de contacto, ventas, datos, base de contactos) y con un botón lo guardás en Supabase. De ahí salen la recomendación de "seguir en el barrio" vs "cambiar de barrio", el dashboard del día, la vista semanal, la mensual, la comparativa entre barrios y el historial acumulado por barrio.
+- **`index.html`** — App principal unificada. Las métricas se cargan (automáticamente desde los CSV que los vendedores suben al Drive, o a mano desde la pestaña de respaldo) en Supabase. Tiene Dashboard del día, rendimiento Por grupo, vista semanal, mensual, comparativa entre barrios, historial por barrio y **Base de contactos** (teléfonos de la zona, exportable a Excel). La recomendación de "seguir en el barrio" vs "cambiar" sale de esos datos.
+
+### Base de contactos (teléfonos)
+
+Los vendedores cargan el teléfono en el campo **Número de teléfono** de Map Marker (NO en la descripción, que es solo el estado). Al exportar, ese campo sale como la columna `Phone number` del CSV. La app captura los teléfonos de los pines **Venta, Dato y Obra Social** y los acumula en la tabla `contactos` de Supabase, deduplicados por número. La pestaña **Base de contactos** los muestra filtrables por grupo, barrio, estado y fecha, y los exporta a Excel.
+
+- Tabla: ejecutá una vez [`supabase/contactos.sql`](supabase/contactos.sql) en el SQL Editor (es aditivo, no toca las métricas).
+- Carga manual: al **Guardar en Supabase** una carga en la pestaña de respaldo, los teléfonos se guardan solos.
+- Carga automática: para que el proceso del Drive también los capture, agregale el fragmento [`supabase/apps_script_contactos.gs`](supabase/apps_script_contactos.gs).
 - `metricas.html` — Redirige a `index.html` (la app se unificó; se mantiene solo para no romper enlaces viejos).
 - `app.html` — Registro de visitas sobre un mapa.
 - `reporte.html` — Reporte simple a partir de CSV.

@@ -13,6 +13,7 @@
 --text:#eef2fb; --muted:#c3cbdd; --accent:#80bbb3; --accent-hover:#a1d0c9; --accent-soft:rgba(128,187,179,.16);
 --brand:#4f587d; --brand-soft:#5c6690;
 --venta:#34d399; --dato:#fbbf24; --ausente:#f87171; --obra:#c4b5fd; --otro:#94a3b8;
+--sa:#5e81c9;
 --bueno:#34d399; --aceptable:#fbbf24; --cambiar:#f87171; --neutral:#80bbb3;
 --radius:14px;
 --g-francolini:#4cc3ff; --g-mudry:#34d399; --g-zarate:#fbbf24; --g-ameli:#c4b5fd;
@@ -23,9 +24,6 @@ body{background:linear-gradient(135deg,#2f5b82 0%,#4a4a6e 38%,#7c4e5d 62%,#b23a4
 .brandbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .logobox{background:#ffffff;border-radius:12px;padding:10px 16px;display:inline-flex;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.35)}
 .logobox img{height:38px;display:block}
-.nav{display:flex;gap:10px;flex-wrap:wrap}
-.nav a{color:var(--muted);text-decoration:none;font-size:.85rem;padding:6px 12px;border-radius:8px;border:1px solid var(--line)}
-.nav a:hover{color:var(--text);border-color:var(--accent)}
 .sub{color:var(--muted);font-size:.92rem;margin-top:14px;line-height:1.5}
 
 .setup{background:rgba(251,191,36,.14);border:1px solid var(--dato);border-radius:var(--radius);padding:16px 20px;margin-top:20px;font-size:.88rem;line-height:1.6}
@@ -63,6 +61,9 @@ textarea{width:100%;background:var(--panel2);border:1px solid var(--line);color:
 .msg.err{display:block;background:rgba(248,113,113,.16);color:#fca5a5}
 input[type=file]{display:none}
 
+.infobox{background:var(--accent-soft);border:1px solid var(--accent);border-radius:var(--radius);padding:14px 18px;margin-top:16px;font-size:.86rem;line-height:1.55;color:var(--accent-hover)}
+.infobox b{color:var(--text)}
+
 .rec-card{border-radius:var(--radius);padding:16px 18px;margin-top:12px;font-weight:700;font-size:1.02rem;display:flex;align-items:center;gap:14px}
 .rec-card .ico{font-size:1.7rem}
 .rec-card small{display:block;font-weight:500;font-size:.78rem;margin-top:4px;opacity:.85}
@@ -71,7 +72,6 @@ input[type=file]{display:none}
 .rec-cambiar{background:rgba(248,113,113,.16);color:#fca5a5;border:1px solid var(--cambiar)}
 .rec-neutral{background:var(--accent-soft);color:var(--accent-hover);border:1px solid var(--accent)}
 
-/* Cargas registradas */
 .loads{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .loaditem-wrap{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .loaditem{display:flex;justify-content:space-between;align-items:center;font-size:.86rem;gap:10px;flex-wrap:wrap}
@@ -81,14 +81,23 @@ input[type=file]{display:none}
 .gtag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.75rem;font-weight:700;border:1px solid}
 .ttag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:700;background:rgba(255,255,255,.08)}
 
-/* KPIs */
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-top:6px}
 .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:center}
 .kpi .v{font-size:1.6rem;font-weight:800}
 .kpi .l{color:var(--muted);font-size:.75rem;margin-top:4px}
 .kpi .d{color:var(--muted);font-size:.72rem;margin-top:2px}
+.st-sa{color:var(--sa);font-weight:700}
+.sagrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:14px}
+.sacell{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+.sacell .v{font-size:1.2rem;font-weight:800;color:var(--sa)}
+.sacell .l{color:var(--muted);font-size:.72rem;margin-top:3px}
 
-/* Grupos */
+.turno-block{margin-top:22px}
+.turno-title{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.turno-title .pill{font-size:.72rem;font-weight:700;padding:3px 12px;border-radius:999px}
+.pill-manana{background:rgba(251,191,36,.2);color:#fde68a;border:1px solid var(--dato)}
+.pill-tarde{background:rgba(94,129,201,.2);color:#a9bde6;border:1px solid var(--sa)}
+
 .groupgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:6px}
 .gcard{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;border-top:3px solid var(--gc,var(--accent))}
 .gcard h3{font-size:1rem;font-weight:800;display:flex;justify-content:space-between;align-items:center}
@@ -100,7 +109,6 @@ input[type=file]{display:none}
 .gstats b{font-weight:700}
 .empty{color:var(--muted);font-size:.85rem;font-style:italic;margin-top:10px}
 
-/* Tablas */
 table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:6px}
 th{color:var(--muted);text-align:left;font-weight:600;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
 td{padding:9px 10px;border-bottom:1px solid var(--line)}
@@ -115,7 +123,6 @@ tr:last-child td{border-bottom:none}
 .chip{padding:8px 14px;border-radius:20px;border:2px solid var(--line);background:var(--panel2);color:var(--text);font-size:.82rem;cursor:pointer;user-select:none}
 .chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent-hover);font-weight:700}
 
-/* Layout dos columnas (reporte) */
 .dashboard-grid{display:grid;grid-template-columns:1fr 400px;gap:22px;align-items:start}
 .dashboard-left{display:flex;flex-direction:column}
 .dashboard-left .card{margin-top:22px}
@@ -151,30 +158,153 @@ tr:last-child td{border-bottom:none}
 <div class="wrap">
 <div class="brandbar">
   <span class="logobox"><img src="https://previncasalud.com.ar/wp-content/uploads/2023/10/logo-previnca.svg" alt="Previnca Salud"></span>
-  <nav class="nav">
-    <a href="app.html" target="_self">Registro en mapa</a>
-    <a href="reporte.html" target="_self">Reporte simple</a>
-  </nav>
 </div>
-<p class="sub">Subí el CSV que exporta tu app de campo, asignalo a un grupo y barrio, y obtené el reporte del recorrido. Con <b>Guardar en Supabase</b> queda registrado el turno y recibís la recomendación de <b>seguir en el barrio</b> o <b>cambiar</b>, además de las vistas semanal, mensual e historial por barrio.</p>
+<p class="sub">Las métricas se cargan <b>automáticamente</b> desde los CSV que los vendedores exportan a Drive. Entrá al <b>Dashboard</b> para ver los datos del día por grupo y barrio, usá <b>Por grupo</b> para ver el rendimiento de un líder en un rango de fechas sin importar el barrio, y consultá las vistas semanal, mensual e historial. La pestaña de carga manual queda como respaldo.</p>
 
 <div id="setupBanner" class="setup" style="display:none">
-  ⚠️ <b>Sin conexión a Supabase configurada.</b> El reporte de CSV funciona igual, pero no se guardan las métricas ni vas a ver dashboard, semanal, mensual ni historial. Para activarlo, completá el bloque <code>SUPABASE_CONFIG</code> al inicio del script con tu <code>url</code> y <code>anonKey</code> (Supabase → Settings → API) y ejecutá <code>supabase/schema.sql</code> en el SQL Editor.
+  ⚠️ <b>Sin conexión a Supabase configurada.</b> Para activarla, completá el bloque <code>SUPABASE_CONFIG</code> al inicio del script con tu <code>url</code> y <code>anonKey</code> (Supabase → Settings → API).
 </div>
 
 <div class="tabs">
-  <button class="tab active" data-view="carga">Cargar y reporte</button>
-  <button class="tab supa-only" data-view="dashboard">Dashboard</button>
+  <button class="tab active supa-only" data-view="dashboard">Dashboard</button>
+  <button class="tab supa-only" data-view="porgrupo">Por grupo</button>
   <button class="tab supa-only" data-view="semanal">Vista semanal</button>
   <button class="tab supa-only" data-view="mensual">Vista mensual</button>
   <button class="tab supa-only" data-view="comparativa">Comparativa de barrios</button>
   <button class="tab supa-only" data-view="historial">Historial por barrio</button>
+  <button class="tab supa-only" data-view="contactos">Base de contactos</button>
+  <button class="tab" data-view="carga">Carga manual (respaldo)</button>
 </div>
 
 <datalist id="barriosDatalist"></datalist>
 
-<!-- ============ CARGA Y REPORTE ============ -->
-<div class="view active" id="view-carga">
+<!-- ============ DASHBOARD DEL DÍA ============ -->
+<div class="view active" id="view-dashboard">
+  <div class="card">
+    <h2>Dashboard del día<small>Datos cargados automáticamente desde Drive. Elegí fecha, grupo, turno y barrio.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="dFecha">Fecha</label><input type="date" id="dFecha"></div>
+      <div class="field"><label for="dGrupo">Grupo</label><select id="dGrupo"></select></div>
+      <div class="field"><label for="dTurno">Turno</label><select id="dTurno"><option value="mañana">Mañana</option><option value="tarde">Tarde</option></select></div>
+      <div class="field"><label for="dBarrio">Barrio</label><input type="text" id="dBarrio" list="barriosDatalist" autocomplete="off" placeholder="Todos"></div>
+      <button class="btn ghost" id="btnDashRefrescar">Ver</button>
+    </div>
+    <div id="dashContent"></div>
+  </div>
+</div>
+
+<!-- ============ POR GRUPO (rango de fechas) ============ -->
+<div class="view" id="view-porgrupo">
+  <div class="card">
+    <h2>Rendimiento por grupo<small>Elegí un líder y un rango de fechas. Ves el total del grupo y el desglose por barrio, sin importar en qué barrio estuvo cada día. Mañana y tarde se muestran separados.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="gGrupo">Grupo</label><select id="gGrupo"></select></div>
+      <div class="field"><label for="gDesde">Desde</label><input type="date" id="gDesde"></div>
+      <div class="field"><label for="gHasta">Hasta</label><input type="date" id="gHasta"></div>
+      <button class="btn ghost" id="btnGrupoVer">Ver</button>
+    </div>
+    <div id="grupoContent"><p class="empty">Elegí un grupo y un rango de fechas, y tocá Ver.</p></div>
+  </div>
+</div>
+
+<!-- ============ VISTA SEMANAL ============ -->
+<div class="view" id="view-semanal">
+  <div class="card">
+    <h2>Vista semanal</h2>
+    <div class="loadrow">
+      <div class="field"><label for="sSemana">Semana</label><input type="week" id="sSemana"></div>
+      <button class="btn ghost" id="btnSemanaVer">Ver semana</button>
+    </div>
+    <div class="tablewrap"><table id="semTable"><thead>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th><th>Días</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="semEmpty" style="display:none">No hay registros cargados para esa semana.</p>
+    <div class="chartbox"><canvas id="semChart" height="90"></canvas></div>
+  </div>
+</div>
+
+<!-- ============ VISTA MENSUAL ============ -->
+<div class="view" id="view-mensual">
+  <div class="card">
+    <h2>Vista mensual</h2>
+    <div class="loadrow">
+      <div class="field"><label for="mMes">Mes</label><input type="month" id="mMes"></div>
+      <button class="btn ghost" id="btnMesVer">Ver mes</button>
+    </div>
+    <div class="tablewrap"><table id="mesTable"><thead>
+      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th><th>Días</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="mesEmpty" style="display:none">No hay registros cargados para ese mes.</p>
+  </div>
+  <div class="card">
+    <h2>Ranking de barrios por tasa de venta<small>Suma de todos los grupos en el mes seleccionado.</small></h2>
+    <div class="tablewrap"><table id="rankTable"><thead>
+      <tr><th>#</th><th>Barrio</th><th>Visitas</th><th class="st-venta">Ventas</th><th>Tasa venta</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="rankEmpty" style="display:none">No hay datos suficientes para armar el ranking.</p>
+  </div>
+</div>
+
+<!-- ============ COMPARATIVA DE BARRIOS ============ -->
+<div class="view" id="view-comparativa">
+  <div class="card">
+    <h2>Comparativa de barrios</h2>
+    <div class="loadrow">
+      <div class="field"><label for="pDesde">Desde</label><input type="date" id="pDesde"></div>
+      <div class="field"><label for="pHasta">Hasta</label><input type="date" id="pHasta"></div>
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label>Barrios a comparar</label>
+      <div class="chips" id="pChips"></div>
+    </div>
+    <button class="btn ghost" id="btnCompararVer" style="margin-top:16px">Comparar</button>
+    <div class="chartbox"><canvas id="pChart" height="100"></canvas></div>
+    <p class="empty" id="pEmpty" style="display:none">Seleccioná al menos un barrio y un rango de fechas con datos cargados.</p>
+  </div>
+</div>
+
+<!-- ============ HISTORIAL POR BARRIO ============ -->
+<div class="view" id="view-historial">
+  <div class="card">
+    <h2>Historial por barrio<small>Buscá un barrio (aunque sea parcial, ej: "eche") para ver todo lo cargado ahí hasta ahora.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="hBarrio">Barrio</label><input type="text" id="hBarrio" list="barriosDatalist" autocomplete="off" placeholder="Ej: Echesortu…"></div>
+      <button class="btn ghost" id="btnHistorialVer">Buscar</button>
+    </div>
+    <div id="historialContent"><p class="empty">Escribí el nombre de un barrio y tocá Buscar.</p></div>
+  </div>
+</div>
+
+<!-- ============ BASE DE CONTACTOS (Supabase, acumulada) ============ -->
+<div class="view" id="view-contactos">
+  <div class="card">
+    <h2>Base de contactos <span class="badge" id="ctBadge" style="background:var(--dato);color:#1a1500;font-size:.72rem;padding:3px 10px;border-radius:999px;font-weight:800">0</span>
+      <small>Teléfonos capturados en el campo <b>Número de teléfono</b> de Map Marker (pines Venta, Dato y Obra Social). Se acumulan día a día. Filtrá y exportá a Excel.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="ctGrupo">Grupo</label><select id="ctGrupo"></select></div>
+      <div class="field"><label for="ctBarrio">Barrio</label><input type="text" id="ctBarrio" list="barriosDatalist" autocomplete="off" placeholder="Todos"></div>
+      <div class="field"><label for="ctEstado">Estado</label><select id="ctEstado"><option value="">Todos</option><option value="dato">Dato</option><option value="venta">Venta</option><option value="obra">Obra social</option></select></div>
+      <div class="field"><label for="ctDesde">Desde</label><input type="date" id="ctDesde"></div>
+      <div class="field"><label for="ctHasta">Hasta</label><input type="date" id="ctHasta"></div>
+      <button class="btn ghost" id="btnContactosVer">Ver</button>
+    </div>
+    <div class="export-btns" style="margin-top:14px">
+      <button class="btn secondary" id="btnCtCopiar">📋 Copiar</button>
+      <button class="btn secondary" id="btnCtExcel">📥 Exportar Excel</button>
+    </div>
+    <div class="tablewrap" style="margin-top:14px"><table id="ctTable"><thead>
+      <tr><th>Teléfono</th><th>Dirección</th><th>Estado</th><th>Barrio</th><th>Grupo</th><th>Fecha</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="ctEmpty" style="display:none">No hay contactos cargados para esos filtros.</p>
+  </div>
+</div>
+
+<!-- ============ CARGA MANUAL (RESPALDO) ============ -->
+<div class="view" id="view-carga">
+
+<div class="infobox">
+  <b>Esta pestaña es un respaldo manual.</b> Normalmente no hace falta: los CSV que los vendedores exportan a Drive se cargan solos. Usala solo si necesitás subir un CSV puntual a mano, o para armar la <b>base de contactos</b> (teléfonos de los "Dato") y exportarla a Excel.
+</div>
 
 <div class="card">
   <div class="tabs" style="margin-top:0">
@@ -228,8 +358,8 @@ tr:last-child td{border-bottom:none}
   </div>
   <div class="dashboard-right">
     <div class="contactos-card" id="contactosCard">
-      <h2>Base de contactos <span class="badge" id="contactosBadge">0</span></h2>
-      <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Registros con estado <b class="st-dato">Dato</b> listos para seguimiento.</p>
+      <h2>Contactos de estas cargas <span class="badge" id="contactosBadge">0</span></h2>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Teléfonos de los CSV que cargaste recién. La base acumulada e histórica está en la pestaña <b>Base de contactos</b>.</p>
       <div class="contactos-toolbar">
         <select id="filtroContactos"><option value="todos">Todos los grupos</option></select>
         <select id="filtroBarrioContactos"><option value="todos">Todos los barrios</option></select>
@@ -251,99 +381,27 @@ tr:last-child td{border-bottom:none}
 
 </div><!-- /view-carga -->
 
-<!-- ============ DASHBOARD DEL DÍA ============ -->
-<div class="view" id="view-dashboard">
-  <div class="card">
-    <h2>Dashboard del día</h2>
-    <div class="loadrow">
-      <div class="field"><label for="dFecha">Fecha</label><input type="date" id="dFecha"></div>
-      <div class="field"><label for="dGrupo">Grupo</label><select id="dGrupo"></select></div>
-      <div class="field"><label for="dBarrio">Barrio</label><input type="text" id="dBarrio" list="barriosDatalist" autocomplete="off" placeholder="Todos"></div>
-      <button class="btn ghost" id="btnDashRefrescar">Ver</button>
-    </div>
-    <div id="dashContent"></div>
-  </div>
-</div>
-
-<!-- ============ VISTA SEMANAL ============ -->
-<div class="view" id="view-semanal">
-  <div class="card">
-    <h2>Vista semanal</h2>
-    <div class="loadrow">
-      <div class="field"><label for="sSemana">Semana</label><input type="week" id="sSemana"></div>
-      <button class="btn ghost" id="btnSemanaVer">Ver semana</button>
-    </div>
-    <div class="tablewrap"><table id="semTable"><thead>
-      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th>Días</th></tr>
-    </thead><tbody></tbody></table></div>
-    <p class="empty" id="semEmpty" style="display:none">No hay registros cargados para esa semana.</p>
-    <div class="chartbox"><canvas id="semChart" height="90"></canvas></div>
-  </div>
-</div>
-
-<!-- ============ VISTA MENSUAL ============ -->
-<div class="view" id="view-mensual">
-  <div class="card">
-    <h2>Vista mensual</h2>
-    <div class="loadrow">
-      <div class="field"><label for="mMes">Mes</label><input type="month" id="mMes"></div>
-      <button class="btn ghost" id="btnMesVer">Ver mes</button>
-    </div>
-    <div class="tablewrap"><table id="mesTable"><thead>
-      <tr><th>Barrio</th><th>Grupo</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th>Días</th></tr>
-    </thead><tbody></tbody></table></div>
-    <p class="empty" id="mesEmpty" style="display:none">No hay registros cargados para ese mes.</p>
-  </div>
-  <div class="card">
-    <h2>Ranking de barrios por tasa de venta<small>Suma de todos los grupos en el mes seleccionado.</small></h2>
-    <div class="tablewrap"><table id="rankTable"><thead>
-      <tr><th>#</th><th>Barrio</th><th>Visitas</th><th class="st-venta">Ventas</th><th>Tasa venta</th></tr>
-    </thead><tbody></tbody></table></div>
-    <p class="empty" id="rankEmpty" style="display:none">No hay datos suficientes para armar el ranking.</p>
-  </div>
-</div>
-
-<!-- ============ COMPARATIVA DE BARRIOS ============ -->
-<div class="view" id="view-comparativa">
-  <div class="card">
-    <h2>Comparativa de barrios</h2>
-    <div class="loadrow">
-      <div class="field"><label for="pDesde">Desde</label><input type="date" id="pDesde"></div>
-      <div class="field"><label for="pHasta">Hasta</label><input type="date" id="pHasta"></div>
-    </div>
-    <div class="field" style="margin-top:14px">
-      <label>Barrios a comparar</label>
-      <div class="chips" id="pChips"></div>
-    </div>
-    <button class="btn ghost" id="btnCompararVer" style="margin-top:16px">Comparar</button>
-    <div class="chartbox"><canvas id="pChart" height="100"></canvas></div>
-    <p class="empty" id="pEmpty" style="display:none">Seleccioná al menos un barrio y un rango de fechas con datos cargados.</p>
-  </div>
-</div>
-
-<!-- ============ HISTORIAL POR BARRIO ============ -->
-<div class="view" id="view-historial">
-  <div class="card">
-    <h2>Historial por barrio<small>Buscá un barrio (aunque sea parcial, ej: "eche") para ver todo lo cargado ahí hasta ahora.</small></h2>
-    <div class="loadrow">
-      <div class="field"><label for="hBarrio">Barrio</label><input type="text" id="hBarrio" list="barriosDatalist" autocomplete="off" placeholder="Ej: Echesortu…"></div>
-      <button class="btn ghost" id="btnHistorialVer">Buscar</button>
-    </div>
-    <div id="historialContent"><p class="empty">Escribí el nombre de un barrio y tocá Buscar.</p></div>
-  </div>
-</div>
-
 </div><!-- /wrap -->
 
 <script>
 /* ============================================
    CONFIGURACIÓN — completar con los datos de tu proyecto Supabase
-   (Settings → API en supabase.com)
 ============================================ */
 const SUPABASE_CONFIG = {
   url: "https://mxgkkeangcuqxlvrekqx.supabase.co",
   anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14Z2trZWFuZ2N1cXhsdnJla3F4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyOTE1MTAsImV4cCI6MjEwMDg2NzUxMH0.SLS9yrUfBvl4UoRTXi3QBVM8TXVhNlydR4l2Vg9i01s"
 };
+
+/* Servicio asistencial (competencia + Previnca). Previnca es NUESTRO servicio ya existente
+   en la casa; se cuenta junto con el resto del servicio asistencial. Para agregar/sacar, editá SOLO esta lista. */
+const COMPETENCIAS = [
+  { col: "sa_ciba", label: "Ciba" }, { col: "sa_copeto", label: "Copeto" },
+  { col: "sa_bassi", label: "Bassi" }, { col: "sa_oeste", label: "Oeste" },
+  { col: "sa_pocho_bernardo", label: "Pocho Bernardo" }, { col: "sa_cgyl", label: "CGYL" },
+  { col: "sa_novara", label: "Novara" }, { col: "sa_global", label: "Global" },
+  { col: "sa_games", label: "Games" }, { col: "sa_previnca", label: "Previnca" }
+];
+const sumaSA = r => COMPETENCIAS.reduce((a,c)=>a+(+r[c.col]||0), 0);
 
 const $=id=>document.getElementById(id);
 const HARDCODED_GROUPS=[
@@ -358,7 +416,7 @@ let loads=[];
 let mode="file";
 
 const hasSupabase = !!(SUPABASE_CONFIG.url && !SUPABASE_CONFIG.url.includes("TU_PROJECT_URL")
-  && SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes("TU_ANON_KEY"));
+  && SUPABASE_CONFIG.anonKey && !SUPABASE_CONFIG.anonKey.includes("TU_ANON_KEY") && !SUPABASE_CONFIG.anonKey.includes("PEGA_TU_ANON_KEY"));
 let sb=null;
 if(hasSupabase && window.supabase){ sb=window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey); }
 document.body.classList.toggle("supa-off", !hasSupabase);
@@ -378,7 +436,6 @@ function fmtFechaLarga(iso){
   }catch(e){return iso;}
 }
 
-/* ---- navegación entre vistas ---- */
 document.querySelectorAll(".tabs > .tab[data-view]").forEach(t=>{
   t.onclick=()=>{
     document.querySelectorAll(".tabs > .tab[data-view]").forEach(x=>x.classList.remove("active"));
@@ -388,7 +445,6 @@ document.querySelectorAll(".tabs > .tab[data-view]").forEach(t=>{
   };
 });
 
-/* ---- recomendación (reglas de negocio) ---- */
 function recomendar({visitas, tasa_contacto, ventas, datos}){
   if(!visitas) return {tipo:"neutral", texto:"Sin visitas cargadas todavía", detalle:"Cargá al menos una visita para calcular la recomendación."};
   if(tasa_contacto>=50 && ventas>=2) return {tipo:"bueno", texto:"Seguir en el barrio — buen rendimiento", detalle:`Tasa de contacto ${pct(tasa_contacto)} y ${ventas} venta(s).`};
@@ -411,12 +467,14 @@ function calcMetrics(r){
 }
 
 /* ============================================
-   CARGA DE CSV Y REPORTE (cliente)
+   CARGA DE CSV Y REPORTE (cliente) — respaldo manual
 ============================================ */
 function fillGroupSelects(){
   $("selGroup").innerHTML=GRUPOS.map(g=>`<option value="${esc(g.nombre)}">${esc(g.nombre)}</option>`).join("");
   $("filtroContactos").innerHTML=`<option value="todos">Todos los grupos</option>`+GRUPOS.map(g=>`<option value="${esc(g.nombre)}">${esc(g.nombre)}</option>`).join("");
   $("dGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
+  $("gGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
+  $("ctGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
 }
 $("inFecha").value=todayStr();
 
@@ -621,12 +679,32 @@ async function guardarLoad(i){
   const {data,error}=await sb.from("registros_diarios").insert(row).select().single();
   if(error){showMsg("Error al guardar: "+error.message,false);return;}
   l.saved=true; l.savedId=data.id;
-  showMsg(`Guardado en Supabase: ${l.group} — ${l.barrio} (${l.turno}).`,true);
+  const nContactos=await guardarContactosDeLoad(l, g.id);
+  const extra = nContactos>0 ? ` (+${nContactos} teléfono/s a la base de contactos)` : "";
+  showMsg(`Guardado en Supabase: ${l.group} — ${l.barrio} (${l.turno})${extra}.`,true);
   await cargarBarriosSugeridos();
   render();
 }
 
-/* ---- base de contactos ---- */
+// Guarda en la tabla `contactos` los teléfonos de una carga (Venta, Dato u Obra Social
+// que tengan número). Deduplica por teléfono, así recargar el mismo CSV no crea repetidos.
+async function guardarContactosDeLoad(l, grupo_id){
+  if(!hasSupabase) return 0;
+  const limpiarTel=t=>(t||"").replace(/[^0-9]/g,"");
+  const seen=new Set(), rows=[];
+  l.rows.forEach(r=>{
+    if(!["venta","dato","obra"].includes(r.status)) return;
+    const tel=limpiarTel(r.tel);
+    if(tel.length<6) return;                 // descarta vacíos o números inválidos
+    if(seen.has(tel)) return; seen.add(tel);
+    rows.push({telefono:tel, direccion:r.dir||null, estado:r.status, barrio:l.barrio, grupo_id, fecha:l.fecha});
+  });
+  if(!rows.length) return 0;
+  const {error}=await sb.from("contactos").upsert(rows,{onConflict:"telefono",ignoreDuplicates:true});
+  if(error){ showMsg("Guardado, pero falló la base de contactos: "+error.message,false); return 0; }
+  return rows.length;
+}
+
 function renderContactos(){
   const barriosUnicos=[...new Set(loads.map(l=>l.barrio))].sort();
   const sel=$("filtroBarrioContactos");
@@ -726,9 +804,6 @@ async function cargarBarriosSugeridos(){
   renderChipsComparativa();
 }
 
-/* ============================================
-   GRUPOS DESDE SUPABASE
-============================================ */
 async function cargarGrupos(){
   if(!hasSupabase) return;
   const {data,error}=await sb.from("grupos").select("*").order("nombre");
@@ -746,18 +821,22 @@ async function cargarDashboard(){
   if(!hasSupabase) return;
   const fecha=$("dFecha").value||todayStr();
   const grupo_id=$("dGrupo").value, barrio=$("dBarrio").value.trim();
-  let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno","mañana");
+  const turno=$("dTurno").value;
+  let q=sb.from("registros_diarios").select("*").eq("fecha",fecha).eq("turno",turno);
   if(grupo_id) q=q.eq("grupo_id",grupo_id);
   if(barrio) q=q.ilike("barrio",`%${barrio}%`);
   const {data,error}=await q;
   const el=$("dashContent");
   if(error){el.innerHTML=`<p class="empty">Error: ${error.message}</p>`;return;}
-  if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno mañana para esos filtros.</p>`;return;}
+  if(!data||!data.length){el.innerHTML=`<p class="empty">No hay registros de turno ${turno} para esos filtros.</p>`;return;}
   const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,obra_social:a.obra_social+r.obra_social,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0});
   const m=calcMetrics(tot);
+  const saTot={}; COMPETENCIAS.forEach(c=>{saTot[c.col]=0;});
+  data.forEach(r=>{COMPETENCIAS.forEach(c=>{saTot[c.col]+=(+r[c.col]||0);});});
+  const saTotalGlobal=COMPETENCIAS.reduce((a,c)=>a+saTot[c.col],0);
   let comparacionHtml="";
   if(barrio && grupo_id){
-    const {data:prev}=await sb.from("registros_diarios").select("*").ilike("barrio",`%${barrio}%`).eq("grupo_id",grupo_id).eq("turno","mañana").lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
+    const {data:prev}=await sb.from("registros_diarios").select("*").ilike("barrio",`%${barrio}%`).eq("grupo_id",grupo_id).eq("turno",turno).lt("fecha",fecha).order("fecha",{ascending:false}).limit(5);
     if(prev&&prev.length){
       const p=prev.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas}),{visitas:0,atendidos:0,ventas:0});
       const ptasa=p.visitas?Math.round((p.atendidos/p.visitas)*1000)/10:0;
@@ -766,6 +845,10 @@ async function cargarDashboard(){
       comparacionHtml=`<p class="hint">Comparado con los últimos ${prev.length} día(s) en este barrio/grupo: tasa de contacto promedio anterior ${pct(ptasa)} (${deltaTxt} pts hoy), ventas promedio ${(p.ventas/prev.length).toFixed(1)}.</p>`;
     }
   }
+  const saCells=COMPETENCIAS.filter(c=>saTot[c.col]>0).map(c=>`<div class="sacell"><div class="v">${saTot[c.col]}</div><div class="l">${c.label}</div></div>`).join("");
+  const saBloque = saTotalGlobal>0
+    ? `<h2 style="margin-top:22px;font-size:1rem">Servicio asistencial — desglose por competencia <small style="color:var(--muted);font-weight:500">Total: ${saTotalGlobal}</small></h2><div class="sagrid">${saCells}</div>`
+    : `<p class="hint" style="margin-top:18px">Sin servicio asistencial registrado para estos filtros.</p>`;
   el.innerHTML=`
     <div class="kpis">
       <div class="kpi"><div class="v">${m.visitas}</div><div class="l">Visitas</div></div>
@@ -776,10 +859,143 @@ async function cargarDashboard(){
       <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
       <div class="kpi"><div class="v st-obra">${m.obra_social}</div><div class="l">Obra social</div></div>
       <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+      <div class="kpi"><div class="v st-sa">${saTotalGlobal}</div><div class="l">Serv. asistencial</div></div>
     </div>
     <div id="dashRec"></div>
-    ${comparacionHtml}`;
+    ${comparacionHtml}
+    ${saBloque}`;
   renderRecCard($("dashRec"), m);
+}
+
+/* ============================================
+   POR GRUPO — rango de fechas (Supabase)
+   Total del grupo + desglose por barrio, mañana y tarde separados.
+============================================ */
+const hace7=new Date(); hace7.setDate(hace7.getDate()-6);
+$("gDesde").value=dateStr(hace7);
+$("gHasta").value=todayStr();
+$("btnGrupoVer").onclick=cargarPorGrupo;
+
+// Suma un array de registros en un objeto de conteo total.
+function acumularRegistros(arr){
+  const base={visitas:0,atendidos:0,ventas:0,datos:0,obra_social:0,ausentes:0};
+  COMPETENCIAS.forEach(c=>base[c.col]=0);
+  arr.forEach(r=>{
+    base.visitas+=(+r.visitas||0); base.atendidos+=(+r.atendidos||0);
+    base.ventas+=(+r.ventas||0); base.datos+=(+r.datos||0);
+    base.obra_social+=(+r.obra_social||0); base.ausentes+=(+r.ausentes||0);
+    COMPETENCIAS.forEach(c=>base[c.col]+=(+r[c.col]||0));
+  });
+  return base;
+}
+
+function bloqueTurnoHtml(titulo,pillClass,regs){
+  if(!regs.length){
+    return `<div class="turno-block">
+      <div class="turno-title"><span class="pill ${pillClass}">${titulo}</span></div>
+      <p class="empty">Sin registros de ${titulo.toLowerCase()} en este rango.</p></div>`;
+  }
+  const tot=acumularRegistros(regs);
+  const m=calcMetrics(tot);
+  const saTotal=COMPETENCIAS.reduce((a,c)=>a+tot[c.col],0);
+
+  // Desglose por barrio dentro del turno.
+  const porBarrio=new Map();
+  regs.forEach(r=>{
+    const k=r.barrio||"—";
+    if(!porBarrio.has(k)) porBarrio.set(k,[]);
+    porBarrio.get(k).push(r);
+  });
+  const filas=[...porBarrio.entries()].map(([barrio,rr])=>{
+    const t=acumularRegistros(rr);
+    const mm=calcMetrics(t);
+    const dias=new Set(rr.map(x=>x.fecha)).size;
+    const saB=COMPETENCIAS.reduce((a,c)=>a+t[c.col],0);
+    return {barrio,t,mm,dias,saB};
+  }).sort((a,b)=>b.t.ventas-a.t.ventas);
+
+  const filasHtml=filas.map(f=>`<tr>
+    <td><b>${esc(f.barrio)}</b></td>
+    <td>${f.dias}</td>
+    <td>${f.t.visitas}</td>
+    <td>${f.t.atendidos}</td>
+    <td><b>${pct(f.mm.tasa_contacto)}</b></td>
+    <td class="st-venta">${f.t.ventas}</td>
+    <td>${pct(f.mm.tasa_venta)}</td>
+    <td class="st-dato">${f.t.datos}</td>
+    <td class="st-obra">${f.t.obra_social}</td>
+    <td class="st-ausente">${f.t.ausentes}</td>
+    <td class="st-sa">${f.saB}</td>
+  </tr>`).join("");
+
+  return `<div class="turno-block">
+    <div class="turno-title"><span class="pill ${pillClass}">${titulo}</span></div>
+    <div class="kpis" style="margin-top:10px">
+      <div class="kpi"><div class="v">${m.visitas}</div><div class="l">Visitas</div></div>
+      <div class="kpi"><div class="v">${m.atendidos}</div><div class="l">Atendidos</div></div>
+      <div class="kpi"><div class="v" style="color:var(--accent)">${pct(m.tasa_contacto)}</div><div class="l">Tasa de contacto</div></div>
+      <div class="kpi"><div class="v st-venta">${m.ventas}</div><div class="l">Ventas</div></div>
+      <div class="kpi"><div class="v">${pct(m.tasa_venta)}</div><div class="l">Tasa de venta</div></div>
+      <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
+      <div class="kpi"><div class="v st-obra">${m.obra_social}</div><div class="l">Obra social</div></div>
+      <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+      <div class="kpi"><div class="v st-sa">${saTotal}</div><div class="l">Serv. asistencial</div></div>
+    </div>
+    <h2 style="margin-top:18px;font-size:.95rem">Desglose por barrio</h2>
+    <div class="tablewrap"><table><thead>
+      <tr><th>Barrio</th><th>Días</th><th>Visitas</th><th>Atendidos</th><th>Tasa contacto</th><th class="st-venta">Ventas</th><th>Tasa venta</th><th class="st-dato">Datos</th><th class="st-obra">Obra social</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th></tr>
+    </thead><tbody>${filasHtml}</tbody></table></div>
+  </div>`;
+}
+
+async function cargarPorGrupo(){
+  if(!hasSupabase) return;
+  const el=$("grupoContent");
+  const grupo_id=$("gGrupo").value;
+  const desde=$("gDesde").value, hasta=$("gHasta").value;
+  if(!desde||!hasta){ el.innerHTML=`<p class="empty">Elegí desde y hasta.</p>`; return; }
+  let q=sb.from("registros_diarios").select("*").gte("fecha",desde).lte("fecha",hasta);
+  if(grupo_id) q=q.eq("grupo_id",grupo_id);
+  const {data,error}=await q;
+  if(error){ el.innerHTML=`<p class="empty">Error: ${error.message}</p>`; return; }
+  if(!data||!data.length){ el.innerHTML=`<p class="empty">No hay registros para ese grupo en ese rango de fechas.</p>`; return; }
+
+  const g=grupo_id?grupoById(grupo_id):null;
+  const nombreGrupo = g?g.nombre:"Todos los grupos";
+  const color = g?g.color:"#80bbb3";
+
+  // Total general (mañana + tarde juntos) para el encabezado.
+  const totGeneral=acumularRegistros(data);
+  const mGen=calcMetrics(totGeneral);
+  const saGen=COMPETENCIAS.reduce((a,c)=>a+totGeneral[c.col],0);
+  const barriosDistintos=[...new Set(data.map(r=>r.barrio))];
+  const diasDistintos=[...new Set(data.map(r=>r.fecha))];
+
+  const manana=data.filter(r=>r.turno==="mañana");
+  const tarde=data.filter(r=>r.turno==="tarde");
+
+  el.innerHTML=`
+    <div class="card" style="margin-top:16px;border-top:3px solid ${color}">
+      <h2>${esc(nombreGrupo)} — total del rango
+        <small>${fmtFechaCorta(desde)} a ${fmtFechaCorta(hasta)} · ${diasDistintos.length} día(s) con datos · ${barriosDistintos.length} barrio(s) recorrido(s) · mañana y tarde sumados</small></h2>
+      <div class="kpis">
+        <div class="kpi"><div class="v">${mGen.visitas}</div><div class="l">Visitas</div></div>
+        <div class="kpi"><div class="v">${mGen.atendidos}</div><div class="l">Atendidos</div></div>
+        <div class="kpi"><div class="v" style="color:var(--accent)">${pct(mGen.tasa_contacto)}</div><div class="l">Tasa de contacto</div></div>
+        <div class="kpi"><div class="v st-venta">${mGen.ventas}</div><div class="l">Ventas</div></div>
+        <div class="kpi"><div class="v">${pct(mGen.tasa_venta)}</div><div class="l">Tasa de venta</div></div>
+        <div class="kpi"><div class="v st-dato">${mGen.datos}</div><div class="l">Datos</div></div>
+        <div class="kpi"><div class="v st-obra">${mGen.obra_social}</div><div class="l">Obra social</div></div>
+        <div class="kpi"><div class="v st-ausente">${mGen.ausentes}</div><div class="l">Ausentes</div></div>
+        <div class="kpi"><div class="v st-sa">${saGen}</div><div class="l">Serv. asistencial</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      ${bloqueTurnoHtml("Mañana","pill-manana",manana)}
+    </div>
+    <div class="card" style="margin-top:16px">
+      ${bloqueTurnoHtml("Tarde","pill-tarde",tarde)}
+    </div>`;
 }
 
 /* ============================================
@@ -818,7 +1034,7 @@ async function cargarSemana(){
     return `<tr><td><b>${esc(r.barrio)||"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?esc(g.nombre):"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
-    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-sa">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
   }).join("");
   const byBarrio=new Map();
   data.forEach(r=>{
@@ -859,7 +1075,7 @@ async function cargarMes(){
     return `<tr><td><b>${esc(r.barrio)||"—"}</b></td><td><span class="gtag" style="color:${g?.color||"#80bbb3"};border-color:${g?.color||"#80bbb3"}">${g?esc(g.nombre):"—"}</span></td>
     <td>${r.total_visitas}</td><td>${r.total_atendidos}</td><td><b>${pct(r.tasa_contacto)}</b></td>
     <td class="st-venta">${r.total_ventas}</td><td>${pct(r.tasa_venta)}</td>
-    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td>${r.dias_trabajados}</td></tr>`;
+    <td class="st-dato">${r.total_datos}</td><td class="st-obra">${r.total_obra_social}</td><td class="st-ausente">${r.total_ausentes}</td><td class="st-sa">${r.total_servicio_asistencial||0}</td><td>${r.dias_trabajados}</td></tr>`;
   }).join("");
   const byBarrio=new Map();
   data.forEach(r=>{
@@ -924,6 +1140,7 @@ async function cargarHistorial(){
   if(!data||!data.length){ el.innerHTML=`<p class="empty">No hay registros para este barrio todavía.</p>`; return; }
   const tot=data.reduce((a,r)=>({visitas:a.visitas+r.visitas,atendidos:a.atendidos+r.atendidos,ventas:a.ventas+r.ventas,datos:a.datos+r.datos,ausentes:a.ausentes+r.ausentes}),{visitas:0,atendidos:0,ventas:0,datos:0,ausentes:0});
   const m=calcMetrics(tot);
+  const saTotalHist=data.reduce((a,r)=>a+sumaSA(r),0);
   const manana=data.filter(r=>r.turno==="mañana");
   const tarde=data.filter(r=>r.turno==="tarde");
   const tasaProm=arr=>{ const v=arr.reduce((a,r)=>a+r.visitas,0), at=arr.reduce((a,r)=>a+r.atendidos,0); return v?Math.round((at/v)*1000)/10:0; };
@@ -946,6 +1163,7 @@ async function cargarHistorial(){
       <td><b>${esc(r.barrio)}</b></td>
       <td>${r.visitas}</td><td>${r.atendidos}</td><td>${pct(rm.tasa_contacto)}</td>
       <td class="st-venta">${r.ventas}</td><td class="st-dato">${r.datos}</td><td class="st-ausente">${r.ausentes}</td>
+      <td class="st-sa">${sumaSA(r)}</td>
       <td>${esc(r.notas||"—")}</td></tr>`;
   }).join("");
   el.innerHTML=`
@@ -955,6 +1173,7 @@ async function cargarHistorial(){
       <div class="kpi"><div class="v st-venta">${m.ventas}</div><div class="l">Ventas</div></div>
       <div class="kpi"><div class="v st-dato">${m.datos}</div><div class="l">Datos</div></div>
       <div class="kpi"><div class="v st-ausente">${m.ausentes}</div><div class="l">Ausentes</div></div>
+      <div class="kpi"><div class="v st-sa">${saTotalHist}</div><div class="l">Serv. asistencial</div></div>
     </div>
     <div class="rec-card rec-neutral" style="margin-top:16px"><span class="ico">🕑</span><div>${recTexto}</div></div>
     <div class="kpis" style="margin-top:16px">
@@ -964,16 +1183,74 @@ async function cargarHistorial(){
       <div class="kpi"><div class="v st-venta">${tVentasProm.toFixed(1)}</div><div class="l">Ventas prom. — tarde</div></div>
     </div>
     <div class="tablewrap" style="margin-top:18px"><table><thead>
-      <tr><th>Fecha</th><th>Turno</th><th>Grupo</th><th>Barrio</th><th>Visitas</th><th>Atendidos</th><th>Tasa</th><th class="st-venta">Ventas</th><th class="st-dato">Datos</th><th class="st-ausente">Ausentes</th><th>Notas</th></tr>
+      <tr><th>Fecha</th><th>Turno</th><th>Grupo</th><th>Barrio</th><th>Visitas</th><th>Atendidos</th><th>Tasa</th><th class="st-venta">Ventas</th><th class="st-dato">Datos</th><th class="st-ausente">Ausentes</th><th class="st-sa">Serv. asist.</th><th>Notas</th></tr>
     </thead><tbody>${filas}</tbody></table></div>`;
 }
+
+/* ============================================
+   BASE DE CONTACTOS (Supabase, acumulada)
+============================================ */
+const ct30=new Date(); ct30.setDate(ct30.getDate()-30);
+$("ctDesde").value=dateStr(ct30);
+$("ctHasta").value=todayStr();
+$("btnContactosVer").onclick=cargarContactos;
+let CONTACTOS_CACHE=[];
+
+async function cargarContactos(){
+  if(!hasSupabase) return;
+  let q=sb.from("contactos").select("*").order("fecha",{ascending:false}).order("created_at",{ascending:false});
+  const grupo_id=$("ctGrupo").value, barrio=$("ctBarrio").value.trim(), estado=$("ctEstado").value;
+  const desde=$("ctDesde").value, hasta=$("ctHasta").value;
+  if(grupo_id) q=q.eq("grupo_id",grupo_id);
+  if(barrio) q=q.ilike("barrio",`%${barrio}%`);
+  if(estado) q=q.eq("estado",estado);
+  if(desde) q=q.gte("fecha",desde);
+  if(hasta) q=q.lte("fecha",hasta);
+  const {data,error}=await q;
+  const tbody=$("ctTable").querySelector("tbody");
+  if(error){tbody.innerHTML="";CONTACTOS_CACHE=[];$("ctBadge").textContent="0";$("ctEmpty").style.display="block";$("ctEmpty").textContent="Error: "+error.message;return;}
+  CONTACTOS_CACHE=data||[];
+  $("ctBadge").textContent=CONTACTOS_CACHE.length;
+  if(!CONTACTOS_CACHE.length){tbody.innerHTML="";$("ctEmpty").style.display="block";$("ctEmpty").textContent="No hay contactos cargados para esos filtros.";return;}
+  $("ctEmpty").style.display="none";
+  const estLabel={dato:"Dato",venta:"Venta",obra:"Obra social"};
+  tbody.innerHTML=CONTACTOS_CACHE.map(c=>{
+    const g=grupoById(c.grupo_id); const color=g?.color||"#80bbb3";
+    return `<tr><td style="font-family:ui-monospace,monospace;color:var(--accent);font-weight:700">${esc(c.telefono)}</td>
+      <td>${esc(c.direccion||"—")}</td><td>${estLabel[c.estado]||esc(c.estado||"—")}</td>
+      <td>${esc(c.barrio||"—")}</td>
+      <td><span class="gtag" style="color:${color};border-color:${color}">${g?esc(g.nombre):"—"}</span></td>
+      <td>${fmtFechaCorta(c.fecha)}</td></tr>`;
+  }).join("");
+}
+function contactosParaExport(){
+  const estLabel={dato:"Dato",venta:"Venta",obra:"Obra social"};
+  return CONTACTOS_CACHE.map(c=>({tel:c.telefono, dir:c.direccion||"", est:estLabel[c.estado]||c.estado||"", barrio:c.barrio||"", grupo:(grupoById(c.grupo_id)?.nombre)||"", fecha:fmtFechaCorta(c.fecha)}));
+}
+$("btnCtCopiar").onclick=()=>{
+  const cs=contactosParaExport();
+  if(!cs.length){showMsg&&0;return;}
+  const lines=["Teléfono\tDirección\tEstado\tBarrio\tGrupo\tFecha"];
+  cs.forEach(c=>lines.push(`${c.tel}\t${c.dir}\t${c.est}\t${c.barrio}\t${c.grupo}\t${c.fecha}`));
+  navigator.clipboard.writeText(lines.join("\n")).catch(()=>{});
+};
+$("btnCtExcel").onclick=()=>{
+  if(typeof XLSX==="undefined")return;
+  const cs=contactosParaExport();
+  if(!cs.length)return;
+  const data=[["Teléfono","Dirección","Estado","Barrio","Grupo","Fecha"],...cs.map(c=>[c.tel,c.dir,c.est,c.barrio,c.grupo,c.fecha])];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Contactos");
+  XLSX.writeFile(wb,`base_contactos_previnca_${todayStr()}.xlsx`);
+};
 
 /* ============================================
    ARRANQUE
 ============================================ */
 fillGroupSelects();
 cargarBarriosSugeridos();
-if(hasSupabase){ cargarGrupos().then(()=>{ cargarDashboard(); }); }
+if(hasSupabase){ cargarGrupos().then(()=>{ cargarDashboard(); cargarContactos(); }); }
 render();
 </script>
 </body>
