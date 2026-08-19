@@ -52,6 +52,13 @@
  *    sa_xxx / sa_previnca = cada uno cuenta lo suyo (y suma en visitas/atendidos)
  *    pin vacío o no reconocido -> se IGNORA y se avisa por mail
  *
+ *    Un mismo pin PUEDE traer más de un estado a la vez si el vendedor
+ *    escribe ambos en la Descripción (ej: "Obra Social y Ciba"). En ese
+ *    caso se cuentan LAS DOS categorías (obra_social Y sa_ciba), no solo
+ *    una. Ojo: como "visitas" suma todas las categorías, ese único pin
+ *    físico pesa 2 en el total de visitas (una por cada categoría que
+ *    trajo), igual que ya pasa hoy con sa_previnca.
+ *
  *  Barrios: se acepta CUALQUIER barrio que venga en el nombre del archivo.
  *  No se valida contra ninguna lista, así los barrios nuevos entran solos.
  *
@@ -100,7 +107,9 @@ const ESTADOS_BASE = [
   { col: 'ausentes',    claves: ['ausente'] }
 ];
 
-/* Competencias + Previnca: el pin debe coincidir EXACTO (normalizado).
+/* Competencias + Previnca: basta con que la clave APAREZCA en el texto
+   (igual que ESTADOS_BASE), así un pin puede traer una competencia junto
+   con un estado base (ej: "Obra Social y Ciba" cuenta las dos cosas).
    'previnca' -> sa_previnca (nuestro servicio existente). */
 const COMPETENCIAS = {
   'ciba':            'sa_ciba',
@@ -241,29 +250,41 @@ function contarPins(archivo, barrioNombre, turnoBD) {
     const estado = norm(crudo);
     if (!estado) { sinClasificar++; continue; }
 
-    if (COMPETENCIAS[estado]) { c[COMPETENCIAS[estado]]++; continue; }
-
     let matcheo = false;
+    let estadoContacto = null; // primer estado "capturable" (venta/dato/obra) de este pin
+
+    // Competencias: un mismo pin puede traer más de una (ej: "Obra Social y Ciba").
+    // Antes exigía que el texto fuera EXACTAMENTE el nombre de la competencia; ahora
+    // basta con que aparezca, igual que los estados base de abajo.
+    for (const clave in COMPETENCIAS) {
+      if (estado.indexOf(clave) !== -1) { c[COMPETENCIAS[clave]]++; matcheo = true; }
+    }
+
+    // Estados base: idem, un pin puede combinar más de uno (ej: "Venta y Dato").
     for (let k = 0; k < ESTADOS_BASE.length; k++) {
       const e = ESTADOS_BASE[k];
       if (e.claves.some(function (clave) { return estado.indexOf(clave) !== -1; })) {
         c[e.col]++; matcheo = true;
-
-        // Contacto de seguimiento: solo Venta, Dato y Obra Social (como en la capacitación).
-        if (idxTelefono !== -1 && (e.col === 'ventas' || e.col === 'datos' || e.col === 'obra_social')) {
-          const tel = String(filas[i][idxTelefono] || '').replace(/[^0-9]/g, '');
-          if (tel.length >= 6) {
-            contactos.push({
-              telefono: tel,
-              direccion: idxTitulo !== -1 ? String(filas[i][idxTitulo] || '').trim() : null,
-              estado: e.col === 'ventas' ? 'venta' : (e.col === 'datos' ? 'dato' : 'obra')
-            });
-          }
+        if (!estadoContacto && (e.col === 'ventas' || e.col === 'datos' || e.col === 'obra_social')) {
+          estadoContacto = e.col === 'ventas' ? 'venta' : (e.col === 'datos' ? 'dato' : 'obra');
         }
-        break;
       }
     }
-    if (!matcheo) sinClasificar++;
+
+    if (!matcheo) { sinClasificar++; continue; }
+
+    // Contacto de seguimiento: uno solo por pin (aunque haya matcheado varias
+    // categorías), usando el primer estado capturable como etiqueta.
+    if (estadoContacto && idxTelefono !== -1) {
+      const tel = String(filas[i][idxTelefono] || '').replace(/[^0-9]/g, '');
+      if (tel.length >= 6) {
+        contactos.push({
+          telefono: tel,
+          direccion: idxTitulo !== -1 ? String(filas[i][idxTitulo] || '').trim() : null,
+          estado: estadoContacto
+        });
+      }
+    }
   }
 
   c._sinClasificar = sinClasificar;
@@ -348,21 +369,29 @@ function cabeceras() {
  * Guarda en `contactos` los teléfonos capturados de un archivo (Venta,
  * Dato y Obra Social). Deduplica por teléfono en toda la base: si el
  * número ya existe, esta llamada lo ignora sin modificarlo.
+ * También deduplica DENTRO del mismo lote (si el mismo teléfono aparece
+ * dos veces en el archivo): mandar el mismo teléfono repetido en un solo
+ * INSERT con ON CONFLICT hace que Postgres rechace el lote entero.
  * A propósito NUNCA lanza error hacia arriba: un problema acá no debe
  * frenar el guardado de métricas ni el movido del archivo a procesados/.
  */
 function guardarContactos(grupoId, barrio, fecha, contactos) {
   try {
-    const rows = contactos.map(function (ct) {
-      return {
+    const vistos = {};
+    const rows = [];
+    contactos.forEach(function (ct) {
+      if (vistos[ct.telefono]) return;
+      vistos[ct.telefono] = true;
+      rows.push({
         telefono: ct.telefono,
         direccion: ct.direccion,
         estado: ct.estado,
         barrio: barrio,
         grupo_id: grupoId,
         fecha: fecha
-      };
+      });
     });
+    if (!rows.length) return;
 
     const resp = UrlFetchApp.fetch(SUPABASE_URL + '/rest/v1/contactos?on_conflict=telefono', {
       method: 'post',
