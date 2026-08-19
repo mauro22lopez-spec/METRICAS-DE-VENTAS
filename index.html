@@ -172,6 +172,7 @@ tr:last-child td{border-bottom:none}
   <button class="tab supa-only" data-view="mensual">Vista mensual</button>
   <button class="tab supa-only" data-view="comparativa">Comparativa de barrios</button>
   <button class="tab supa-only" data-view="historial">Historial por barrio</button>
+  <button class="tab supa-only" data-view="contactos">Base de contactos</button>
   <button class="tab" data-view="carga">Carga manual (respaldo)</button>
 </div>
 
@@ -274,6 +275,30 @@ tr:last-child td{border-bottom:none}
   </div>
 </div>
 
+<!-- ============ BASE DE CONTACTOS (Supabase, acumulada) ============ -->
+<div class="view" id="view-contactos">
+  <div class="card">
+    <h2>Base de contactos <span class="badge" id="ctBadge" style="background:var(--dato);color:#1a1500;font-size:.72rem;padding:3px 10px;border-radius:999px;font-weight:800">0</span>
+      <small>Teléfonos capturados en el campo <b>Número de teléfono</b> de Map Marker (pines Venta, Dato y Obra Social). Se acumulan día a día. Filtrá y exportá a Excel.</small></h2>
+    <div class="loadrow">
+      <div class="field"><label for="ctGrupo">Grupo</label><select id="ctGrupo"></select></div>
+      <div class="field"><label for="ctBarrio">Barrio</label><input type="text" id="ctBarrio" list="barriosDatalist" autocomplete="off" placeholder="Todos"></div>
+      <div class="field"><label for="ctEstado">Estado</label><select id="ctEstado"><option value="">Todos</option><option value="dato">Dato</option><option value="venta">Venta</option><option value="obra">Obra social</option></select></div>
+      <div class="field"><label for="ctDesde">Desde</label><input type="date" id="ctDesde"></div>
+      <div class="field"><label for="ctHasta">Hasta</label><input type="date" id="ctHasta"></div>
+      <button class="btn ghost" id="btnContactosVer">Ver</button>
+    </div>
+    <div class="export-btns" style="margin-top:14px">
+      <button class="btn secondary" id="btnCtCopiar">📋 Copiar</button>
+      <button class="btn secondary" id="btnCtExcel">📥 Exportar Excel</button>
+    </div>
+    <div class="tablewrap" style="margin-top:14px"><table id="ctTable"><thead>
+      <tr><th>Teléfono</th><th>Dirección</th><th>Estado</th><th>Barrio</th><th>Grupo</th><th>Fecha</th></tr>
+    </thead><tbody></tbody></table></div>
+    <p class="empty" id="ctEmpty" style="display:none">No hay contactos cargados para esos filtros.</p>
+  </div>
+</div>
+
 <!-- ============ CARGA MANUAL (RESPALDO) ============ -->
 <div class="view" id="view-carga">
 
@@ -333,8 +358,8 @@ tr:last-child td{border-bottom:none}
   </div>
   <div class="dashboard-right">
     <div class="contactos-card" id="contactosCard">
-      <h2>Base de contactos <span class="badge" id="contactosBadge">0</span></h2>
-      <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Registros con estado <b class="st-dato">Dato</b> listos para seguimiento.</p>
+      <h2>Contactos de estas cargas <span class="badge" id="contactosBadge">0</span></h2>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:14px">Teléfonos de los CSV que cargaste recién. La base acumulada e histórica está en la pestaña <b>Base de contactos</b>.</p>
       <div class="contactos-toolbar">
         <select id="filtroContactos"><option value="todos">Todos los grupos</option></select>
         <select id="filtroBarrioContactos"><option value="todos">Todos los barrios</option></select>
@@ -449,6 +474,7 @@ function fillGroupSelects(){
   $("filtroContactos").innerHTML=`<option value="todos">Todos los grupos</option>`+GRUPOS.map(g=>`<option value="${esc(g.nombre)}">${esc(g.nombre)}</option>`).join("");
   $("dGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
   $("gGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
+  $("ctGrupo").innerHTML=`<option value="">Todos</option>`+GRUPOS.map(g=>`<option value="${g.id||''}">${esc(g.nombre)}</option>`).join("");
 }
 $("inFecha").value=todayStr();
 
@@ -653,9 +679,30 @@ async function guardarLoad(i){
   const {data,error}=await sb.from("registros_diarios").insert(row).select().single();
   if(error){showMsg("Error al guardar: "+error.message,false);return;}
   l.saved=true; l.savedId=data.id;
-  showMsg(`Guardado en Supabase: ${l.group} — ${l.barrio} (${l.turno}).`,true);
+  const nContactos=await guardarContactosDeLoad(l, g.id);
+  const extra = nContactos>0 ? ` (+${nContactos} teléfono/s a la base de contactos)` : "";
+  showMsg(`Guardado en Supabase: ${l.group} — ${l.barrio} (${l.turno})${extra}.`,true);
   await cargarBarriosSugeridos();
   render();
+}
+
+// Guarda en la tabla `contactos` los teléfonos de una carga (Venta, Dato u Obra Social
+// que tengan número). Deduplica por teléfono, así recargar el mismo CSV no crea repetidos.
+async function guardarContactosDeLoad(l, grupo_id){
+  if(!hasSupabase) return 0;
+  const limpiarTel=t=>(t||"").replace(/[^0-9]/g,"");
+  const seen=new Set(), rows=[];
+  l.rows.forEach(r=>{
+    if(!["venta","dato","obra"].includes(r.status)) return;
+    const tel=limpiarTel(r.tel);
+    if(tel.length<6) return;                 // descarta vacíos o números inválidos
+    if(seen.has(tel)) return; seen.add(tel);
+    rows.push({telefono:tel, direccion:r.dir||null, estado:r.status, barrio:l.barrio, grupo_id, fecha:l.fecha});
+  });
+  if(!rows.length) return 0;
+  const {error}=await sb.from("contactos").upsert(rows,{onConflict:"telefono",ignoreDuplicates:true});
+  if(error){ showMsg("Guardado, pero falló la base de contactos: "+error.message,false); return 0; }
+  return rows.length;
 }
 
 function renderContactos(){
@@ -1141,11 +1188,69 @@ async function cargarHistorial(){
 }
 
 /* ============================================
+   BASE DE CONTACTOS (Supabase, acumulada)
+============================================ */
+const ct30=new Date(); ct30.setDate(ct30.getDate()-30);
+$("ctDesde").value=dateStr(ct30);
+$("ctHasta").value=todayStr();
+$("btnContactosVer").onclick=cargarContactos;
+let CONTACTOS_CACHE=[];
+
+async function cargarContactos(){
+  if(!hasSupabase) return;
+  let q=sb.from("contactos").select("*").order("fecha",{ascending:false}).order("created_at",{ascending:false});
+  const grupo_id=$("ctGrupo").value, barrio=$("ctBarrio").value.trim(), estado=$("ctEstado").value;
+  const desde=$("ctDesde").value, hasta=$("ctHasta").value;
+  if(grupo_id) q=q.eq("grupo_id",grupo_id);
+  if(barrio) q=q.ilike("barrio",`%${barrio}%`);
+  if(estado) q=q.eq("estado",estado);
+  if(desde) q=q.gte("fecha",desde);
+  if(hasta) q=q.lte("fecha",hasta);
+  const {data,error}=await q;
+  const tbody=$("ctTable").querySelector("tbody");
+  if(error){tbody.innerHTML="";CONTACTOS_CACHE=[];$("ctBadge").textContent="0";$("ctEmpty").style.display="block";$("ctEmpty").textContent="Error: "+error.message;return;}
+  CONTACTOS_CACHE=data||[];
+  $("ctBadge").textContent=CONTACTOS_CACHE.length;
+  if(!CONTACTOS_CACHE.length){tbody.innerHTML="";$("ctEmpty").style.display="block";$("ctEmpty").textContent="No hay contactos cargados para esos filtros.";return;}
+  $("ctEmpty").style.display="none";
+  const estLabel={dato:"Dato",venta:"Venta",obra:"Obra social"};
+  tbody.innerHTML=CONTACTOS_CACHE.map(c=>{
+    const g=grupoById(c.grupo_id); const color=g?.color||"#80bbb3";
+    return `<tr><td style="font-family:ui-monospace,monospace;color:var(--accent);font-weight:700">${esc(c.telefono)}</td>
+      <td>${esc(c.direccion||"—")}</td><td>${estLabel[c.estado]||esc(c.estado||"—")}</td>
+      <td>${esc(c.barrio||"—")}</td>
+      <td><span class="gtag" style="color:${color};border-color:${color}">${g?esc(g.nombre):"—"}</span></td>
+      <td>${fmtFechaCorta(c.fecha)}</td></tr>`;
+  }).join("");
+}
+function contactosParaExport(){
+  const estLabel={dato:"Dato",venta:"Venta",obra:"Obra social"};
+  return CONTACTOS_CACHE.map(c=>({tel:c.telefono, dir:c.direccion||"", est:estLabel[c.estado]||c.estado||"", barrio:c.barrio||"", grupo:(grupoById(c.grupo_id)?.nombre)||"", fecha:fmtFechaCorta(c.fecha)}));
+}
+$("btnCtCopiar").onclick=()=>{
+  const cs=contactosParaExport();
+  if(!cs.length){showMsg&&0;return;}
+  const lines=["Teléfono\tDirección\tEstado\tBarrio\tGrupo\tFecha"];
+  cs.forEach(c=>lines.push(`${c.tel}\t${c.dir}\t${c.est}\t${c.barrio}\t${c.grupo}\t${c.fecha}`));
+  navigator.clipboard.writeText(lines.join("\n")).catch(()=>{});
+};
+$("btnCtExcel").onclick=()=>{
+  if(typeof XLSX==="undefined")return;
+  const cs=contactosParaExport();
+  if(!cs.length)return;
+  const data=[["Teléfono","Dirección","Estado","Barrio","Grupo","Fecha"],...cs.map(c=>[c.tel,c.dir,c.est,c.barrio,c.grupo,c.fecha])];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Contactos");
+  XLSX.writeFile(wb,`base_contactos_previnca_${todayStr()}.xlsx`);
+};
+
+/* ============================================
    ARRANQUE
 ============================================ */
 fillGroupSelects();
 cargarBarriosSugeridos();
-if(hasSupabase){ cargarGrupos().then(()=>{ cargarDashboard(); }); }
+if(hasSupabase){ cargarGrupos().then(()=>{ cargarDashboard(); cargarContactos(); }); }
 render();
 </script>
 </body>

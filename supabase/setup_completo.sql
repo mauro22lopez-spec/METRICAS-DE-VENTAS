@@ -1,18 +1,24 @@
 -- ============================================
--- Métricas de Ventas Domiciliarias — Previnca Salud
--- Script de creación de base de datos en Supabase
--- Ejecutar completo en el SQL Editor de Supabase (proyecto nuevo)
+-- Setup completo — Previnca Salud (Métricas de Ventas)
 --
--- Si tu proyecto ya tiene una versión anterior de este schema
--- (con una tabla `barrios` y `registros_diarios.barrio_id`),
--- NO corras este script: usá supabase/migration_barrio_libre.sql
--- para migrar sin perder los datos ya cargados.
+-- Este script deja la base en el estado correcto SIN IMPORTAR cómo esté hoy:
+-- borra cualquier versión previa (tablas o vistas viejas) y la reconstruye
+-- desde cero con el modelo actual (barrio como texto libre).
+--
+-- ⚠️ OJO: borra los datos que hubiera en registros_diarios. Usalo solo si no
+-- tenés métricas reales guardadas que quieras conservar. Si SÍ tenés datos
+-- que no querés perder, no uses este script: usá supabase/migration_barrio_libre.sql.
 -- ============================================
 
--- ============================================
--- TABLAS
--- ============================================
+-- 1) Limpieza de cualquier versión anterior (es seguro aunque no existan)
+DROP VIEW  IF EXISTS metricas_semanales;
+DROP VIEW  IF EXISTS metricas_mensuales;
+DROP VIEW  IF EXISTS barrios_usados;
+DROP TABLE IF EXISTS registros_diarios CASCADE;
+DROP TABLE IF EXISTS barrios CASCADE;
+DROP TABLE IF EXISTS grupos CASCADE;
 
+-- 2) Tablas
 CREATE TABLE grupos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   nombre TEXT NOT NULL UNIQUE,
@@ -38,20 +44,15 @@ CREATE TABLE registros_diarios (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Índices para performance
+-- 3) Índices
 CREATE INDEX idx_registros_fecha ON registros_diarios(fecha);
 CREATE INDEX idx_registros_grupo ON registros_diarios(grupo_id);
 CREATE INDEX idx_registros_barrio ON registros_diarios(barrio);
 CREATE INDEX idx_registros_fecha_grupo ON registros_diarios(fecha, grupo_id);
-
--- Necesaria para el índice de búsqueda parcial de abajo (ilike '%texto%' en el historial por barrio)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX idx_registros_barrio_trgm ON registros_diarios USING gin (barrio gin_trgm_ops);
 
--- ============================================
--- VISTAS AGREGADAS
--- ============================================
-
+-- 4) Vistas agregadas
 CREATE OR REPLACE VIEW metricas_semanales AS
 SELECT
   date_trunc('week', fecha) AS semana,
@@ -64,13 +65,9 @@ SELECT
   SUM(obra_social) AS total_obra_social,
   SUM(ausentes) AS total_ausentes,
   CASE WHEN SUM(visitas) > 0
-    THEN ROUND(SUM(atendidos)::numeric / SUM(visitas) * 100, 1)
-    ELSE 0
-  END AS tasa_contacto,
+    THEN ROUND(SUM(atendidos)::numeric / SUM(visitas) * 100, 1) ELSE 0 END AS tasa_contacto,
   CASE WHEN SUM(visitas) > 0
-    THEN ROUND(SUM(ventas)::numeric / SUM(visitas) * 100, 1)
-    ELSE 0
-  END AS tasa_venta,
+    THEN ROUND(SUM(ventas)::numeric / SUM(visitas) * 100, 1) ELSE 0 END AS tasa_venta,
   COUNT(DISTINCT fecha) AS dias_trabajados
 FROM registros_diarios
 GROUP BY date_trunc('week', fecha), grupo_id, barrio;
@@ -87,41 +84,25 @@ SELECT
   SUM(obra_social) AS total_obra_social,
   SUM(ausentes) AS total_ausentes,
   CASE WHEN SUM(visitas) > 0
-    THEN ROUND(SUM(atendidos)::numeric / SUM(visitas) * 100, 1)
-    ELSE 0
-  END AS tasa_contacto,
+    THEN ROUND(SUM(atendidos)::numeric / SUM(visitas) * 100, 1) ELSE 0 END AS tasa_contacto,
   CASE WHEN SUM(visitas) > 0
-    THEN ROUND(SUM(ventas)::numeric / SUM(visitas) * 100, 1)
-    ELSE 0
-  END AS tasa_venta,
+    THEN ROUND(SUM(ventas)::numeric / SUM(visitas) * 100, 1) ELSE 0 END AS tasa_venta,
   COUNT(DISTINCT fecha) AS dias_trabajados
 FROM registros_diarios
 GROUP BY date_trunc('month', fecha), grupo_id, barrio;
 
--- Barrios ya usados, para alimentar el autocomplete sin traer todos los
--- registros (una fila por barrio en vez de una por visita).
 CREATE OR REPLACE VIEW barrios_usados AS
 SELECT DISTINCT barrio FROM registros_diarios ORDER BY barrio;
 
--- ============================================
--- DATOS INICIALES
--- ============================================
-
+-- 5) Grupos iniciales
 INSERT INTO grupos (nombre, color) VALUES
   ('Francolini', '#4cc3ff'),
   ('Mudry', '#34d399'),
   ('Zarate', '#fbbf24'),
   ('Ameli', '#c4b5fd');
 
--- Los barrios ya no se precargan: se escriben libremente al cargar
--- métricas y la app va sugiriendo, vía autocomplete, los que ya se usaron.
-
--- ============================================
--- RLS (Row Level Security)
--- ============================================
-
+-- 6) Seguridad de acceso (RLS)
 ALTER TABLE grupos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registros_diarios ENABLE ROW LEVEL SECURITY;
-
 CREATE POLICY "Allow all" ON grupos FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all" ON registros_diarios FOR ALL USING (true) WITH CHECK (true);
