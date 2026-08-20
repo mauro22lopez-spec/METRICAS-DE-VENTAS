@@ -13,6 +13,10 @@
  *  - El BARRIO sale del NOMBRE del archivo, tomando la parte ANTES del "_".
  *      Ej: "alberdi_baez.csv"  -> barrio "alberdi"  (apellido se ignora)
  *          "alberdi.csv"       -> barrio "alberdi"  (compatibilidad)
+ *  - La FECHA es la de hoy, SALVO que el nombre del archivo traiga una fecha
+ *    (para cargar días anteriores). Acepta AAAA-MM-DD o DD-MM-AAAA.
+ *      Ej: "alberdi_baez_2026-08-05.csv" -> se guarda con fecha 2026-08-05
+ *          "alberdi_baez.csv"            -> se guarda con la fecha de hoy
  *  - Cada pin trae su estado en la columna "Description".
  *
  *  ────────────────────────────────────────────────────────────────────
@@ -189,14 +193,18 @@ function procesarCarpeta(carpeta, grupoId, turnoBD, fechaHoy) {
       continue;
     }
 
+    // Fecha del recorrido: si el nombre del archivo trae una fecha (para cargar
+    // días viejos), se usa esa; si no, la de hoy (comportamiento normal).
+    const fechaArchivo = fechaDesdeNombre(nombre) || fechaHoy;
+
     try {
       const parcial = contarPins(f, barrio, turnoBD);
-      acumularEnSupabase(grupoId, barrio, fechaHoy, turnoBD, parcial);
+      acumularEnSupabase(grupoId, barrio, fechaArchivo, turnoBD, parcial);
       if (parcial._contactos && parcial._contactos.length) {
-        guardarContactos(grupoId, barrio, fechaHoy, parcial._contactos);
+        guardarContactos(grupoId, barrio, fechaArchivo, parcial._contactos);
       }
       moverAProcesados(carpeta, f);
-      Logger.log('OK sumado %s / %s / %s <- %s', turnoBD, barrio, fechaHoy, nombre);
+      Logger.log('OK sumado %s / %s / %s <- %s', turnoBD, barrio, fechaArchivo, nombre);
 
       if (parcial._sinClasificar > 0) {
         avisar('Pins sin clasificar',
@@ -455,6 +463,35 @@ function norm(s) {
   return (s || '').toString().trim().toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
+}
+
+/**
+ * Extrae una fecha del nombre del archivo, para cargar recorridos de d\u00edas
+ * anteriores. Acepta AAAA-MM-DD (recomendado, ej: alberdi_baez_2026-08-05)
+ * o DD-MM-AAAA (ej: alberdi_baez_05-08-2026), con "-" o "_" como separador.
+ * Devuelve 'AAAA-MM-DD' si la fecha es v\u00e1lida y real; si no encuentra una
+ * fecha v\u00e1lida en el nombre, devuelve null (y el proceso usa la fecha de hoy).
+ */
+function fechaDesdeNombre(nombre) {
+  const s = String(nombre || '');
+  let y, m, d;
+
+  // AAAA-MM-DD  (el a\u00f1o va primero: 4 d\u00edgitos)
+  let mm = s.match(/(?:^|[^0-9])(\d{4})[-_](\d{1,2})[-_](\d{1,2})(?:[^0-9]|$)/);
+  if (mm) { y = +mm[1]; m = +mm[2]; d = +mm[3]; }
+  else {
+    // DD-MM-AAAA  (el a\u00f1o va \u00faltimo: 4 d\u00edgitos)
+    mm = s.match(/(?:^|[^0-9])(\d{1,2})[-_](\d{1,2})[-_](\d{4})(?:[^0-9]|$)/);
+    if (mm) { d = +mm[1]; m = +mm[2]; y = +mm[3]; }
+    else return null;
+  }
+
+  // Validaci\u00f3n: que sea una fecha real (evita 2026-13-40 o typos).
+  if (y < 2020 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+
+  return y + '-' + ('0' + m).slice(-2) + '-' + ('0' + d).slice(-2);
 }
 
 function avisar(asunto, cuerpo) {
